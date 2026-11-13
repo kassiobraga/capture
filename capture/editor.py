@@ -15,6 +15,10 @@ from .icons import _ret
 from .overlay import interseccao, recortar
 
 
+RESERVA_DOCK = 92   # px livres embaixo para o dock flutuante
+RAIO_IMAGEM = 6
+
+
 def _layout_texto(cr, it):
     lay = PangoCairo.create_layout(cr)
     lay.set_font_description(Pango.FontDescription("Sans Bold %dpx" % it["tam"]))
@@ -98,11 +102,20 @@ def acerta_item(it, p, tol=6):
     return cr.in_stroke(*p)
 
 
-def vista(w, h, iw, ih, margem=20):
-    """Zoom e deslocamento (ox, oy) para exibir uma imagem iw x ih numa area w x h."""
-    zoom = min(1, (w - 2 * margem) / iw, (h - 2 * margem) / ih)
+def vista(w, h, iw, ih, margem=20, reserva=0):
+    """Zoom e deslocamento (ox, oy) para exibir uma imagem iw x ih numa area w x h.
+
+    `reserva` e a faixa de baixo ocupada pelo dock flutuante: a imagem nunca entra nela.
+    """
+    util = h - reserva
+    zoom = min(1, (w - 2 * margem) / iw, (util - 2 * margem) / ih)
     zoom = max(zoom, 0.02)
-    return zoom, (w - iw * zoom) / 2, (h - ih * zoom) / 2
+    return zoom, (w - iw * zoom) / 2, (util - ih * zoom) / 2
+
+
+def raio_cantos(iw, ih, zoom, raio=RAIO_IMAGEM):
+    """Raio dos cantos arredondados em coordenadas da imagem, limitado a metade do menor lado."""
+    return max(0.0, min(raio / zoom, iw / 2, ih / 2))
 
 
 def para_imagem(x, y, zoom, ox, oy):
@@ -250,16 +263,23 @@ class Editor(Modelo, Gtk.DrawingArea):
         if not self.base:
             return
         iw, ih = self.base.get_width(), self.base.get_height()
-        self.zoom, self.ox, self.oy = vista(w, h, iw, ih)
+        self.zoom, self.ox, self.oy = vista(w, h, iw, ih, reserva=RESERVA_DOCK)
         cr.translate(self.ox, self.oy)
         cr.scale(self.zoom, self.zoom)
-        cr.rectangle(-1, -1, iw + 2, ih + 2)
-        cr.set_source_rgba(0, 0, 0, 0.25)
-        cr.fill()
-        cr.rectangle(0, 0, iw, ih)
+        raio = raio_cantos(iw, ih, self.zoom)
+        for i in range(1, 9):   # sombra suave: camadas translucidas crescentes
+            g = i * 2.2 / self.zoom
+            _ret(cr, -g, -g + 5 / self.zoom, iw + 2 * g, ih + 2 * g, raio + g)
+            cr.set_source_rgba(0, 0, 0, 0.045)
+            cr.fill()
+        cr.save()
+        _ret(cr, 0, 0, iw, ih, raio)   # so a imagem tem cantos arredondados
         cr.clip()
         cr.set_source_surface(self.base, 0, 0)
         cr.paint()
+        cr.restore()
+        cr.rectangle(0, 0, iw, ih)     # marcacoes e previa do corte vao ate o canto
+        cr.clip()
         for it in self.itens:
             desenha_item(cr, it)
         if self.atual:

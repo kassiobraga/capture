@@ -116,6 +116,14 @@ class Editor(x.CasoE2E):
         self.assertTrue({"caneta", "marca", "borracha", "texto", "cortar", "desfazer", "refazer"} <= set(g["botoes"]))
         classes = self.jan.da_classe("capture")
         self.assertIn(g["xid"], classes)
+        self.assertEqual(g["estado"]["tela"], "editor")
+        self.assertTrue(g["estado"]["dock"])
+        self.assertEqual(g["estado"]["chip"], "600 × 400 px")
+        # o dock flutuante nao cobre a borda de baixo da imagem
+        e = g["editor"]
+        base_img = e["caixa"][1] + e["oy"] + 400 * e["zoom"]
+        topo_dock = g["botoes"]["caneta"][1]
+        self.assertLess(base_img, topo_dock)
 
     def test_ferramentas_desfazer_borracha_corte_salvar_e_copiar(self):
         app, g = self.abre()
@@ -153,6 +161,9 @@ class Editor(x.CasoE2E):
             img = self.salva(app, ent)
             self.assertEqual((img.get_width(), img.get_height()), (600, 400))
             self.assertTrue(perto(rgb(img, 5, 5), BASE), "fundo intacto")
+            # dock, chip de tamanho e avisos sao so da interface: nao aparecem na imagem exportada
+            for ponto in ((10, 392), (590, 392), (300, 395), (590, 5), (300, 5)):
+                self.assertTrue(perto(rgb(img, *ponto), BASE), "fora das marcacoes: %s" % (ponto,))
             self.assertTrue(perto(rgb(img, 150, 50), MARCA), "marca-texto semitransparente sobre o azul")
             self.assertTrue(perto(rgb(img, 150, 100), BASE), "longe da marca, fundo")
             self.assertTrue(tem_cor(img, 100, 200, VERMELHO), "caneta")
@@ -202,6 +213,38 @@ class Editor(x.CasoE2E):
             time.sleep(0.8)
             self.assertEqual(app.geometria()["editor"]["imagem"], [600, 400])
             self.assertEqual(app.geometria()["editor"]["itens"], 6)
+
+    def test_aviso_de_copiar_nao_cobre_o_dock(self):
+        """O toast fica no alto: logo depois de copiar, o desfazer do dock ainda responde ao clique."""
+        app, g = self.abre()
+        with self.entrada() as ent:
+            ent.tecla("r")
+            self.desenha(ent, g, [(300, 100), (450, 200)])
+            self.assertEqual(self.itens(app), 1, app.geometria()["editor"]["tipos"])
+            ent.tecla("c", "Control_L")       # mostra o aviso "Copiado para a area de transferencia"
+            time.sleep(1.2)                   # o aviso ja esta inteiro na tela
+            ent.clicar(*self.centro(g, "desfazer"))
+            self.assertEqual(self.itens(app), 0, app.geometria()["editor"]["tipos"])
+            ent.clicar(*self.centro(g, "refazer"))   # com o aviso ainda na tela
+            self.assertEqual(self.itens(app), 1, app.geometria()["editor"]["tipos"])
+
+    def test_aviso_pode_ser_fechado_no_x_e_a_faixa_so_recebe_cliques_com_aviso(self):
+        app, g = self.abre()
+        self.assertFalse(g["estado"]["faixa_alvo"], "sem aviso a faixa nao pode capturar cliques")
+        with self.entrada() as ent:
+            ent.tecla("c", "Control_L")
+            time.sleep(0.9)
+            g2 = app.geometria()
+            self.assertEqual(g2["estado"]["avisos"], 1)
+            self.assertTrue(g2["estado"]["faixa_alvo"])
+            fx, fy, fw, fh = g2["estado"]["faixa_avisos"]
+            ox, oy = self.jan.origem(g2["xid"])
+            # o "x" do aviso fica ~146 px a direita do centro da faixa, a ~41 px do topo dela
+            ent.clicar(ox + g2["transform"][0] + fx + fw / 2 + 146, oy + g2["transform"][1] + fy + 41)
+            time.sleep(0.9)    # antes dos 3 s do tempo normal do aviso
+            g3 = app.geometria()
+            self.assertEqual(g3["estado"]["avisos"], 0)
+            self.assertFalse(g3["estado"]["faixa_alvo"])
 
     def test_janela_acompanha_o_tamanho_de_uma_nova_imagem(self):
         app, g = self.abre()

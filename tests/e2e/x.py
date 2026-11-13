@@ -202,6 +202,39 @@ class Janelas:
         r = self.raiz.translate_coords(w, 0, 0)
         return r.x, r.y
 
+    def pilha(self):
+        """Janelas gerenciadas, da de baixo para a de cima."""
+        p = self.raiz.get_full_property(self.d.intern_atom("_NET_CLIENT_LIST_STACKING"), X.AnyPropertyType)
+        return list(p.value) if p else []
+
+    def no_topo(self, wid, px, py):
+        """A janela wid e a de cima no ponto (px, py) da tela?"""
+        for w in reversed(self.pilha()):
+            try:
+                o = self.d.create_resource_object("window", w)
+                g = o.get_geometry()
+                ox, oy = self.origem(w)
+                attrs = o.get_attributes()
+            except Exception:
+                continue
+            if attrs.map_state != X.IsViewable:
+                continue
+            if ox <= px < ox + g.width and oy <= py < oy + g.height:
+                return w == wid
+        return False
+
+    def traz_para_cima(self, wid, px, py, tempo=6):
+        """Ativa a janela e espera ate ela ser a de cima no ponto (px, py)."""
+        for _ in range(3):
+            subprocess.run(["wmctrl", "-ia", hex(wid)], check=False)
+            fim = time.time() + tempo / 3
+            while time.time() < fim:
+                if self.no_topo(wid, px, py):
+                    time.sleep(0.3)
+                    return True
+                time.sleep(0.1)
+        raise AssertionError("a janela de teste nao ficou por cima em %s,%s" % (px, py))
+
     def tamanho_tela(self):
         s = self.d.screen()
         return s.width_in_pixels, s.height_in_pixels

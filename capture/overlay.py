@@ -15,6 +15,8 @@ from gi.repository import Gdk, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 from . import MODOS
 from .icons import _ret, botao
+from .tema import ESCURO, rgb
+from . import teste
 from .x11 import listar_janelas
 
 
@@ -82,6 +84,24 @@ def caixa_selecao(modo, ini, fim, caminho, gw, gh):
     return max(0, x0), max(0, y0), min(gw, x1), min(gh, y1)
 
 
+DICAS = {"ret": "Arraste para selecionar  ·  Esc cancela",
+         "janela": "Clique em uma janela  ·  Esc cancela",
+         "livre": "Desenhe em volta da área  ·  Esc cancela"}
+# a sobreposicao e sempre escura (a tela e escurecida): usa a paleta escura do tema
+ACENTO = rgb(ESCURO["accent"])
+FUNDO_ESCURO = rgb(ESCURO["canvas"])
+SUPERFICIE = rgb(ESCURO["surface"])
+
+
+def colchetes(cr, x, y, w, h, c=16):
+    """Cantos em L (so tracado, sem pintar) nos quatro cantos do retangulo."""
+    c = max(2, min(c, w / 2, h / 2))
+    for cx, cy, dx, dy in ((x, y, 1, 1), (x + w, y, -1, 1), (x + w, y + h, -1, -1), (x, y + h, 1, -1)):
+        cr.move_to(cx + dx * c, cy)
+        cr.line_to(cx, cy)
+        cr.line_to(cx, cy + dy * c)
+
+
 class Sobreposicao(Gtk.Window):
     """Janela em tela cheia de um monitor, com a tela congelada e a selecao."""
 
@@ -108,8 +128,13 @@ class Sobreposicao(Gtk.Window):
         mov.connect("motion", self._passa)
         self.area.add_controller(mov)
 
-        self.pill = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER, valign=Gtk.Align.START, margin_top=18)
+        self.pill = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER, valign=Gtk.Align.END, margin_bottom=44)
+        self.pill.add_css_class("vidro")
         self.pill.add_css_class("pill")
+        self.dica = Gtk.Label(halign=Gtk.Align.CENTER, valign=Gtk.Align.START, margin_top=28)
+        self.dica.add_css_class("vidro")
+        self.dica.add_css_class("dica")
+        self.dica.set_can_target(False)   # decorativa: o arraste ou clique que comeca embaixo dela vale
         self.bts = {}
         grupo = None
         for cod, nome in MODOS:
@@ -128,6 +153,7 @@ class Sobreposicao(Gtk.Window):
         ov = Gtk.Overlay()
         ov.set_child(self.area)
         ov.add_overlay(self.pill)
+        ov.add_overlay(self.dica)
         self.set_child(ov)
         tec = Gtk.EventControllerKey()
         tec.connect("key-pressed", self._tecla)
@@ -135,11 +161,15 @@ class Sobreposicao(Gtk.Window):
         self.connect("close-request", self._fechando)
         self.sincroniza()
         self.fullscreen_on_monitor(monitor)
+        teste.grava_overlay(self)
 
     def sincroniza(self):
         self._trava = True
         self.bts[self.s.modo].set_active(True)
         self._trava = False
+        self.dica.set_label(DICAS.get(self.s.modo, ""))
+        self.pill.set_visible(True)
+        self.dica.set_visible(True)
         self.ini = self.fim = self.alvo = None
         self.caminho = []
         self.area.queue_draw()
@@ -174,6 +204,7 @@ class Sobreposicao(Gtk.Window):
         self.ini = self.fim = (x, y)
         self.caminho = [(x, y)]
         self.pill.set_visible(False)
+        self.dica.set_visible(False)
 
     def _mov(self, g, dx, dy):
         if not self.ini:
@@ -198,6 +229,7 @@ class Sobreposicao(Gtk.Window):
             self.ini = self.fim = None
             self.caminho = []
             self.pill.set_visible(True)
+            self.dica.set_visible(True)
             self.area.queue_draw()
             return
         a, b = self._px(x0, y0)
@@ -219,7 +251,7 @@ class Sobreposicao(Gtk.Window):
 
     def _desenha(self, _a, cr, w, h):
         self._tela(cr)
-        cr.set_source_rgba(0, 0, 0, 0.5)
+        cr.set_source_rgba(*FUNDO_ESCURO, 0.55)
         cr.paint()
         modo = self.s.modo
         caixa = None
@@ -244,26 +276,32 @@ class Sobreposicao(Gtk.Window):
         self._tela(cr)
         cr.restore()
         cr.append_path(caminho)
-        cr.set_source_rgb(1, 1, 1)
+        cr.set_source_rgb(*ACENTO)
         cr.set_line_width(2)
-        cr.set_dash([6, 4])
+        cr.set_line_join(cairo.LINE_JOIN_MITER)
         cr.stroke()
         if caixa and caixa[2] > 0:
+            cr.set_line_width(4)
+            cr.set_line_cap(cairo.LINE_CAP_SQUARE)
+            colchetes(cr, *caixa)
+            cr.stroke()
             txt = "%d × %d" % (round(caixa[2] * self.esc), round(caixa[3] * self.esc))
             lay = PangoCairo.create_layout(cr)
-            lay.set_font_description(Pango.FontDescription("Sans 9"))
+            lay.set_font_description(Pango.FontDescription("Sans Bold 9"))
             lay.set_text(txt)
             tw, th = lay.get_pixel_size()
-            bx = min(max(4, caixa[0] + caixa[2] - tw - 12), w - tw - 16)
-            by = caixa[1] + caixa[3] + 6
-            if by + th + 8 > h:
-                by = caixa[1] + caixa[3] - th - 12
-            cr.set_dash([])
-            _ret(cr, bx, by, tw + 12, th + 6, 4)
-            cr.set_source_rgba(0.12, 0.12, 0.12, 0.92)
-            cr.fill()
-            cr.set_source_rgb(1, 1, 1)
-            cr.move_to(bx + 6, by + 3)
+            bx = min(max(4, caixa[0] + caixa[2] - tw - 20), w - tw - 24)
+            by = caixa[1] + caixa[3] + 10
+            if by + th + 12 > h:
+                by = caixa[1] + caixa[3] - th - 20
+            _ret(cr, bx, by, tw + 20, th + 10, 9)
+            cr.set_source_rgba(*SUPERFICIE, 0.9)
+            cr.fill_preserve()
+            cr.set_source_rgba(*ACENTO, 0.45)
+            cr.set_line_width(1)
+            cr.stroke()
+            cr.set_source_rgb(*ACENTO)
+            cr.move_to(bx + 10, by + 5)
             PangoCairo.show_layout(cr, lay)
 
 

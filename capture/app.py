@@ -20,28 +20,60 @@ from .editor import Editor
 from .icons import Icone, botao
 from .overlay import Sessao
 from . import teste
+from .tema import CLARO, ESCURO, tokens_css
 
+# Identidade: azul-marinho profundo, um unico acento verde-agua e paineis de "vidro"
+# (preenchimento translucido + borda clara de 1 px + sombra suave + raio generoso).
+# Os tokens sao definidos uma vez por tema; o resto deriva deles.
 CSS_BASE = """
-headerbar, .barra { background: @window_bg_color; box-shadow: none; }
-.barra { padding: 4px 10px 8px 10px; }
-button, menubutton > button, dropdown > button { border-radius: 5px; }
-.status { padding: 5px 12px; font-size: 0.86em; opacity: 0.75; border-top: 1px solid alpha(currentColor, 0.12); }
-.tela { background: alpha(currentColor, 0.06); }
-.pill { background: @window_bg_color; color: @window_fg_color; border-radius: 9px; padding: 5px;
-        border: 1px solid alpha(currentColor, 0.18); box-shadow: 0 8px 24px alpha(black, 0.45); }
-.pill button { min-width: 34px; min-height: 30px; padding: 0; }
-.pill button:checked, .barra togglebutton:checked, .barra menubutton.on > button {
-        background: alpha(currentColor, 0.12); box-shadow: inset 0 -2px 0 @accent_bg_color; }
-.sobre { background: black; }
+@define-color window_bg_color @cap_surface;   @define-color window_fg_color @cap_text;
+@define-color view_bg_color @cap_surface;     @define-color view_fg_color @cap_text;
+@define-color headerbar_bg_color @cap_surface; @define-color headerbar_fg_color @cap_text;
+@define-color popover_bg_color @cap_raised;   @define-color popover_fg_color @cap_text;
+@define-color card_bg_color @cap_raised;      @define-color card_fg_color @cap_text;
+@define-color dialog_bg_color @cap_raised;    @define-color dialog_fg_color @cap_text;
+@define-color accent_bg_color @cap_accent;    @define-color accent_color @cap_accent;
+@define-color accent_fg_color @cap_accent_fg;
+
+headerbar { background: @cap_surface; color: @cap_text; box-shadow: none;
+            border-bottom: 1px solid @cap_edge; min-height: 48px; }
+.titulo-app { font-weight: 700; letter-spacing: 0.3px; padding: 0 6px; }
+.mudo { color: alpha(@cap_text, 0.65); }
+.vazio { background: @cap_surface; }
+.tela { background: @cap_canvas; }
+
+.vidro { background: alpha(@cap_raised, 0.78); border: 1px solid @cap_edge; border-radius: 16px;
+         box-shadow: 0 10px 30px alpha(black, 0.35); }
+.dock, .pill { padding: 6px 8px; }
+.dock button, .dock menubutton > button, .pill button, .modos button, .atraso > button {
+        min-width: 34px; min-height: 34px; padding: 0; border-radius: 10px;
+        background: none; box-shadow: none; border: none; color: @cap_text; }
+.dock button:hover, .dock menubutton > button:hover, .pill button:hover, .modos button:hover,
+.atraso > button:hover { background: alpha(@cap_text, 0.08); }
+.dock button:checked, .dock menubutton.on > button, .pill button:checked, .modos button:checked {
+        background: alpha(@cap_accent, 0.18); color: @cap_accent; }
+.dock separator { background: @cap_edge; min-width: 1px; margin: 6px 4px; }
+.chip { padding: 5px 12px; border-radius: 14px; font-size: 0.86em; margin: 0 0 18px 18px; }
+.dica { padding: 7px 16px; border-radius: 14px; font-size: 0.92em; }
+
+.modos { background: alpha(@cap_text, 0.06); border-radius: 12px; padding: 3px; }
+.modos button { min-width: 38px; min-height: 28px; }
+.atraso > button { min-width: 0; padding: 0 10px; min-height: 30px; background: alpha(@cap_text, 0.06); }
+.atraso label { font-weight: 600; font-size: 0.92em; }
+button.capturar { background: @cap_accent; color: @cap_accent_fg; border-radius: 10px; font-weight: 700;
+                  min-height: 32px; padding: 0 14px; box-shadow: none; border: none; }
+button.capturar:hover { background: shade(@cap_accent, 1.08); }
+headerbar button.discreto { min-width: 34px; min-height: 32px; padding: 0; border-radius: 10px; background: none;
+                            box-shadow: none; color: @cap_text; }
+headerbar button.discreto:hover { background: alpha(@cap_text, 0.08); }
+headerbar button.discreto:disabled { opacity: 0.35; }
+
+.cartao { background: alpha(@cap_raised, 0.78); border: 1px solid @cap_edge; border-radius: 16px;
+          padding: 18px 22px; min-width: 110px; box-shadow: 0 10px 30px alpha(black, 0.25); color: @cap_text; }
+.cartao:hover { border-color: alpha(@cap_accent, 0.7); color: @cap_accent; }
+.cartao label { font-weight: 600; }
 .amostra { min-width: 26px; min-height: 26px; padding: 0; border-radius: 13px; }
-"""
-CSS_CLARO = """
-@define-color accent_bg_color #0f6cbd; @define-color accent_color #0f6cbd; @define-color accent_fg_color #ffffff;
-@define-color window_bg_color #f3f3f3; @define-color headerbar_bg_color #f3f3f3;
-"""
-CSS_ESCURO = """
-@define-color accent_bg_color #60cdff; @define-color accent_color #60cdff; @define-color accent_fg_color #06202e;
-@define-color window_bg_color #202020; @define-color headerbar_bg_color #202020;
+.sobre { background: @cap_canvas; }
 """
 
 
@@ -77,26 +109,80 @@ def decodifica_caminho(v):
 
 class Janela(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title=NOME, default_width=560, default_height=300)
+        super().__init__(application=app, title=NOME, default_width=760, default_height=560)
         self.sessao = None
         self.salvo_em = None
-
-        cab = Adw.HeaderBar(title_widget=Adw.WindowTitle(title=NOME))
-        self.b_novo = botao("mais", "Nova captura (Ctrl+N)", "Novo", plano=False)
-        self.b_novo.add_css_class("suggested-action")
-        self.b_novo.connect("clicked", lambda *_: self.nova_captura())
-        self.dd_modo = Gtk.DropDown.new_from_strings([n for _, n in MODOS])
-        self.dd_modo.set_tooltip_text("Modo de captura")
-        self.dd_atraso = Gtk.DropDown.new_from_strings([n for _, n in ATRASOS])
-        self.dd_atraso.set_tooltip_text("Atraso antes de capturar")
-        for w in (self.b_novo, self.dd_modo, self.dd_atraso):
-            cab.pack_start(w)
-
-        # barra de ferramentas do editor
-        self.barra = Gtk.CenterBox()
-        self.barra.add_css_class("barra")
-        meio = Gtk.Box(spacing=2)
+        self.modo = MODOS[0][0]
+        self.atraso = ATRASOS[0][0]
         self.editor = Editor(self._mudou)
+        self.editor.add_css_class("tela")
+
+        # ---- cabecalho: titulo | modos + atraso | copiar, salvar, capturar
+        cab = Adw.HeaderBar()
+        t = Gtk.Label(label=NOME)
+        t.add_css_class("titulo-app")
+        cab.pack_start(t)
+
+        centro = Gtk.Box(spacing=10)
+        modos = Gtk.Box(spacing=2)
+        modos.add_css_class("modos")
+        self.b_modo = {}
+        grupo = None
+        for cod, nome in MODOS:
+            b = botao(cod, nome, alternar=True, plano=False)
+            if grupo:
+                b.set_group(grupo)
+            grupo = grupo or b
+            b.connect("toggled", self._modo_escolhido, cod)
+            self.b_modo[cod] = b
+            modos.append(b)
+        self.b_modo[self.modo].set_active(True)
+        centro.append(modos)
+
+        self.lb_atraso = Gtk.Label(label="0s")
+        cx = Gtk.Box(spacing=6)
+        cx.append(Icone("relogio"))
+        cx.append(self.lb_atraso)
+        self.mb_atraso = Gtk.MenuButton(tooltip_text="Atraso antes de capturar")
+        self.mb_atraso.add_css_class("atraso")
+        self.mb_atraso.set_child(cx)
+        lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
+                        margin_start=4, margin_end=4)
+        self.b_atraso = {}
+        gr = None
+        for seg, nome in ATRASOS:
+            b = Gtk.ToggleButton(label=nome)
+            b.add_css_class("flat")
+            if gr:
+                b.set_group(gr)
+            gr = gr or b
+            b.connect("clicked", self._atraso_escolhido, seg)
+            self.b_atraso[seg] = b
+            lista.append(b)
+        self.b_atraso[self.atraso].set_active(True)
+        self.mb_atraso.set_popover(Gtk.Popover(child=lista))
+        centro.append(self.mb_atraso)
+        cab.set_title_widget(centro)
+
+        self.b_capturar = botao("capturar", "Nova captura (Ctrl+N)", "Capturar", plano=False)
+        self.b_capturar.add_css_class("capturar")
+        self.b_capturar.connect("clicked", lambda *_: self.nova_captura())
+        cab.pack_end(self.b_capturar)
+        self.b_salvar = botao("salvar", "Salvar como (Ctrl+S)")
+        self.b_salvar.add_css_class("discreto")
+        self.b_salvar.connect("clicked", lambda *_: self.salvar_como())
+        cab.pack_end(self.b_salvar)
+        self.b_copiar = botao("copiar", "Copiar (Ctrl+C)")
+        self.b_copiar.add_css_class("discreto")
+        self.b_copiar.connect("clicked", lambda *_: self.copiar())
+        cab.pack_end(self.b_copiar)
+        self.b_copiar.set_sensitive(False)
+        self.b_salvar.set_sensitive(False)
+
+        # ---- dock flutuante de ferramentas
+        self.dock = Gtk.Box(spacing=2, halign=Gtk.Align.CENTER, valign=Gtk.Align.END, margin_bottom=18)
+        self.dock.add_css_class("vidro")
+        self.dock.add_css_class("dock")
         self.ferrs = {}
         grupo = None
 
@@ -111,27 +197,26 @@ class Janela(Adw.ApplicationWindow):
             onde.append(b)
             return b
 
-        alterna("caneta", "caneta", "Caneta (P)", meio)
-        alterna("marca", "marca", "Marca-texto (H)", meio)
-        alterna("borracha", "borracha", "Borracha (E): apaga a marcação clicada", meio)
+        alterna("caneta", "caneta", "Caneta (P)", self.dock)
+        alterna("marca", "marca", "Marca-texto (H)", self.dock)
+        alterna("borracha", "borracha", "Borracha (E): apaga a marcação clicada", self.dock)
         self.mb_formas = Gtk.MenuButton(tooltip_text="Formas")
         self.mb_formas.set_child(Icone("formas"))
-        self.mb_formas.add_css_class("flat")
-        cx = Gtk.Box(spacing=2)
-        for cod, dica in (("f_ret", "Retângulo (R)"), ("f_elipse", "Elipse (O)"), ("f_linha", "Linha (L)"), ("f_seta", "Seta (A)")):
+        cx = Gtk.Box(spacing=2, margin_top=4, margin_bottom=4, margin_start=4, margin_end=4)
+        for cod, dica in (("f_ret", "Retângulo (R)"), ("f_elipse", "Elipse (O)"), ("f_linha", "Linha (L)"),
+                          ("f_seta", "Seta (A)")):
             alterna(cod, cod, dica, cx).connect("clicked", lambda *_: self.mb_formas.popdown())
         self.mb_formas.set_popover(Gtk.Popover(child=cx))
-        meio.append(self.mb_formas)
-        alterna("texto", "texto", "Texto (T)", meio)
-        alterna("cortar", "cortar", "Cortar a imagem (X)", meio)
-        meio.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_start=4, margin_end=4))
+        self.dock.append(self.mb_formas)
+        alterna("texto", "texto", "Texto (T)", self.dock)
+        alterna("cortar", "cortar", "Cortar a imagem (X)", self.dock)
+        self.dock.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
 
         self.ic_cor = Icone("cor", 18, self.editor.cor)
         self.mb_cor = Gtk.MenuButton(tooltip_text="Cor e espessura")
         self.mb_cor.set_child(self.ic_cor)
-        self.mb_cor.add_css_class("flat")
-        pc = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=6, margin_bottom=6,
-                     margin_start=6, margin_end=6)
+        pc = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=8, margin_bottom=8,
+                     margin_start=8, margin_end=8)
         linha = Gtk.Box(spacing=6)
         for c in CORES:
             b = Gtk.Button()
@@ -146,46 +231,92 @@ class Janela(Adw.ApplicationWindow):
         self.esc_esp.connect("value-changed", self._esp)
         pc.append(self.esc_esp)
         self.mb_cor.set_popover(Gtk.Popover(child=pc))
-        meio.append(self.mb_cor)
-        meio.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_start=4, margin_end=4))
+        self.dock.append(self.mb_cor)
+        self.dock.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL))
         self.b_desf = botao("desfazer", "Desfazer (Ctrl+Z)")
         self.b_desf.connect("clicked", lambda *_: self.editor.desfazer())
         self.b_refz = botao("refazer", "Refazer (Ctrl+Y)")
         self.b_refz.connect("clicked", lambda *_: self.editor.refazer())
-        meio.append(self.b_desf)
-        meio.append(self.b_refz)
-        fim = Gtk.Box(spacing=2)
-        b = botao("copiar", "Copiar (Ctrl+C)")
-        b.connect("clicked", lambda *_: self.copiar())
-        fim.append(b)
-        b = botao("salvar", "Salvar como (Ctrl+S)")
-        b.connect("clicked", lambda *_: self.salvar_como())
-        fim.append(b)
-        self.barra.set_center_widget(meio)
-        self.barra.set_end_widget(fim)
+        self.dock.append(self.b_desf)
+        self.dock.append(self.b_refz)
 
-        vazio = Adw.StatusPage(icon_name=ICONE, title="Pressione Print para capturar",
-                               description="Ou clique em Novo. A captura vai direto para a área de transferência.")
-        self.editor.add_css_class("tela")
+        # ---- chip de informacao (tamanho da imagem)
+        self.chip = Gtk.Label(halign=Gtk.Align.START, valign=Gtk.Align.END)
+        self.chip.add_css_class("vidro")
+        self.chip.add_css_class("chip")
+
+        # ---- estado vazio: icone, titulo, ajuda e um cartao por modo
+        vazio = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14, halign=Gtk.Align.CENTER,
+                        valign=Gtk.Align.CENTER)
+        vazio.add_css_class("vazio")
+        vazio.append(Gtk.Image(icon_name=ICONE, pixel_size=96))
+        tt = Gtk.Label(label=NOME)
+        tt.add_css_class("title-1")
+        vazio.append(tt)
+        aj = Gtk.Label(label="Pressione Print para capturar, ou escolha um modo.\n"
+                             "A captura é copiada e salva automaticamente.", justify=Gtk.Justification.CENTER)
+        aj.add_css_class("mudo")
+        vazio.append(aj)
+        cartoes = Gtk.Box(spacing=14, halign=Gtk.Align.CENTER, margin_top=12)
+        self.cartoes = {}
+        for cod, nome in MODOS:
+            b = Gtk.Button()
+            b.add_css_class("cartao")
+            b.add_css_class("flat")
+            cv = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, halign=Gtk.Align.CENTER)
+            cv.append(Icone(cod, 28))
+            cv.append(Gtk.Label(label=nome))
+            b.set_child(cv)
+            b.set_tooltip_text("Capturar: " + nome)
+            b.connect("clicked", lambda _b, c=cod: self.nova_captura(c))
+            self.cartoes[cod] = b
+            cartoes.append(b)
+        vazio.append(cartoes)
+
         self.pilha = Gtk.Stack()
         self.pilha.add_named(vazio, "vazio")
         self.pilha.add_named(self.editor, "editor")
-        self.status = Gtk.Label(xalign=0)
-        self.status.add_css_class("status")
+        ov = Gtk.Overlay()
+        ov.set_child(self.pilha)
+        ov.add_overlay(self.dock)
+        ov.add_overlay(self.chip)
+        self.dock.set_visible(False)
+        self.chip.set_visible(False)
+        # avisos no alto da tela: nunca cobrem o dock nem o selo de tamanho, que ficam embaixo
+        # A faixa so recebe cliques enquanto ha um aviso na tela (para o botao de fechar do aviso
+        # funcionar); fora disso nao captura nada e nao atrapalha o desenho no alto da imagem.
+        self.toasts = Adw.ToastOverlay(valign=Gtk.Align.START, halign=Gtk.Align.CENTER)
+        self.toasts.set_size_request(460, 88)
+        self.toasts.set_can_target(False)
+        self.n_avisos = 0
+        ov.add_overlay(self.toasts)
 
         tv = Adw.ToolbarView()
         tv.add_top_bar(cab)
-        tv.add_top_bar(self.barra)
-        tv.add_bottom_bar(self.status)
-        tv.set_content(self.pilha)
+        tv.set_content(ov)
         self.set_content(tv)
-        self.barra.set_visible(False)
-        self.status.set_visible(False)
         self.ferrs["caneta"].set_active(True)
 
         tec = Gtk.EventControllerKey()
         tec.connect("key-pressed", self._tecla)
         self.add_controller(tec)
+        teste.grava_geometria(self)
+
+    # ---- modo e atraso
+    def _modo_escolhido(self, b, cod):
+        if b.get_active():
+            self.modo = cod
+
+    def _define_modo(self, cod):
+        if cod in self.b_modo:
+            self.b_modo[cod].set_active(True)
+
+    def _atraso_escolhido(self, b, seg):
+        # "clicked" (e nao "toggled") para fechar o menu tambem ao reescolher a opcao atual
+        self.atraso = seg
+        self.lb_atraso.set_label("%ds" % seg)
+        b.set_active(True)
+        self.mb_atraso.popdown()
 
     # ---- ferramentas
     def _ferr(self, b, cod):
@@ -237,10 +368,10 @@ class Janela(Adw.ApplicationWindow):
         if self.sessao:
             return
         if modo in dict(MODOS):
-            self.dd_modo.set_selected([c for c, _ in MODOS].index(modo))
-        modo = MODOS[self.dd_modo.get_selected()][0]
+            self._define_modo(modo)
+        modo = self.modo
         if atraso is None:
-            atraso = ATRASOS[self.dd_atraso.get_selected()][0]
+            atraso = self.atraso
         self._visivel = self.get_visible()
         self.set_visible(False)
         self.sessao = Sessao(self.get_application(), modo, atraso, self._capturou)
@@ -249,7 +380,7 @@ class Janela(Adw.ApplicationWindow):
         modo = self.sessao.modo if self.sessao else None
         self.sessao = None
         if modo in dict(MODOS):
-            self.dd_modo.set_selected([c for c, _ in MODOS].index(modo))
+            self._define_modo(modo)
         if erro:
             ficou = self._visivel or self.editor.base
             self.present()
@@ -294,7 +425,7 @@ class Janela(Adw.ApplicationWindow):
         if mon is not None:
             g = mon.get_geometry()
             lim_w, lim_h = min(lim_w, g.width - 80), min(lim_h, g.height - 100)
-        w, h = int(min(max(iw + 60, 720), lim_w)), int(min(max(ih + 170, 440), lim_h))
+        w, h = int(min(max(iw + 60, 720), lim_w)), int(min(max(ih + 200, 480), lim_h))
         if self.get_mapped():
             # GTK 4 ignora set_default_size com a janela visivel: esconde e mostra de novo
             self.set_visible(False)
@@ -303,8 +434,10 @@ class Janela(Adw.ApplicationWindow):
     def abrir(self, img, novo=False):
         self.editor.definir_imagem(img)
         self.pilha.set_visible_child_name("editor")
-        self.barra.set_visible(True)
-        self.status.set_visible(True)
+        self.dock.set_visible(True)
+        self.chip.set_visible(True)
+        self.b_copiar.set_sensitive(True)
+        self.b_salvar.set_sensitive(True)
         self._dimensiona(img.get_width(), img.get_height())
         self.salvo_em = None
         partes = []
@@ -319,9 +452,22 @@ class Janela(Adw.ApplicationWindow):
         teste.grava_geometria(self)
 
     def _status(self, *partes):
+        """Atualiza o chip de tamanho e, se houver mensagens, mostra um aviso passageiro."""
         img = self.editor.base
-        tam = ["%d × %d px" % (img.get_width(), img.get_height())] if img else []
-        self.status.set_label("     ".join(tam + list(partes)))
+        if img:
+            self.chip.set_label("%d × %d px" % (img.get_width(), img.get_height()))
+        if partes:
+            t = Adw.Toast(title="  ·  ".join(partes), timeout=3)
+            t.set_use_markup(False)
+            t.connect("dismissed", self._aviso_fechado)
+            self.n_avisos += 1
+            self.toasts.set_can_target(True)
+            self.toasts.add_toast(t)
+
+    def _aviso_fechado(self, _toast):
+        self.n_avisos = max(0, self.n_avisos - 1)
+        if not self.n_avisos:
+            self.toasts.set_can_target(False)
 
     def _mudou(self):
         self._status()
@@ -415,7 +561,7 @@ class App(Adw.Application):
             Adw.StyleManager.get_default().set_color_scheme(
                 Adw.ColorScheme.FORCE_DARK if escuro else Adw.ColorScheme.FORCE_LIGHT)
         css = Gtk.CssProvider()
-        css.load_from_string((CSS_ESCURO if escuro else CSS_CLARO) + CSS_BASE)
+        css.load_from_string(tokens_css(ESCURO if escuro else CLARO) + CSS_BASE)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), css,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         Gtk.Window.set_default_icon_name(ICONE)

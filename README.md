@@ -4,20 +4,26 @@ Captura de tela e anotação para Linux, feita em Python com GTK 4 e libadwaita.
 Você aperta Print, seleciona o que quer, e a imagem já fica copiada e salva. Se
 quiser, marca por cima antes de colar em outro lugar.
 
+![Janela inicial do Capture, com os quatro modos de captura](docs/captura-inicial.png)
+
 ![Editor do Capture com uma imagem de exemplo e algumas marcações](docs/captura-editor.png)
 
 ## Recursos
 
-- Quatro modos de captura: retângulo, janela, tela cheia e forma livre.
-- Atraso opcional de 3, 5 ou 10 segundos.
+- Quatro modos de captura: retângulo, janela, tela cheia e forma livre, escolhidos
+  no seletor do cabeçalho ou nos cartões da tela inicial.
+- Atraso opcional de 3, 5 ou 10 segundos (botão do relógio, ao lado do seletor).
 - Funciona com mais de um monitor: a seleção aparece em todos.
 - Editor com caneta, marca-texto, borracha, formas (retângulo, elipse, linha e
-  seta), texto e corte.
+  seta), texto e corte, numa barra de ferramentas flutuante sobre a imagem.
 - Desfazer e refazer.
 - Toda captura nova é copiada para a área de transferência e salva em PNG
   automaticamente, antes de você anotar. Depois de anotar, copie ou salve de novo.
-- Tema claro ou escuro, seguindo o tema do Cinnamon (fora do Cinnamon, segue o
+- Visual próprio: azul-marinho com um acento verde-água e painéis translúcidos.
+  Tema claro ou escuro, seguindo o tema do Cinnamon (fora do Cinnamon, segue o
   padrão do sistema).
+- Avisos como "Copiado para a área de transferência" e "Salvo em ..." aparecem
+  como mensagens passageiras; o tamanho da imagem fica num selo no canto.
 
 Limites conhecidos:
 
@@ -95,8 +101,9 @@ e nada além disso. As imagens salvas não são apagadas.
 ## Uso
 
 Aperte **Print** (se você ligou a tecla) ou abra "Capture" no menu. Arraste para
-selecionar a área. Na barra no alto da tela dá para trocar o modo; **Esc**
-cancela. Ao soltar o mouse, a captura abre no editor.
+selecionar a área. Na barra flutuante, embaixo na tela, dá para trocar o modo;
+**Esc** cancela. Um aviso no alto lembra o que fazer em cada modo. Ao soltar o
+mouse, a captura abre no editor.
 
 Linha de comando:
 
@@ -162,14 +169,14 @@ O teste da tecla Print só roda se ela estiver vinculada a esta instalação
 (`./install.sh --bind-print`). As variáveis `CAPTURE_APP_ID`, `CAPTURE_DIR` e
 `CAPTURE_TEST_*` existem para esses testes (ver `capture/teste.py`).
 
-A imagem desta página foi gerada por `docs/gerar_captura.py`.
+As imagens desta página foram geradas por `docs/gerar_captura.py`.
 
 ## Estrutura
 
 ```
 capture/      pacote Python (app, overlay, editor, icons, x11, arquivos)
 data/         ícone SVG e modelo do .desktop
-docs/         imagem do README e o script que a gera
+docs/         imagens do README e o script que as gera
 scripts/      funções do atalho do Cinnamon usadas pelos scripts de instalação
 tests/        testes unitários; tests/e2e tem os de ponta a ponta
 install.sh    instalação local

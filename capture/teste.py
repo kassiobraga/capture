@@ -31,17 +31,24 @@ def _grava(jan, arq):
         except Exception:
             pass
         ed = jan.editor
-        botoes = {"novo": jan.b_novo, "formas": jan.mb_formas, "cor": jan.mb_cor,
+        botoes = {"capturar": jan.b_capturar, "copiar": jan.b_copiar, "salvar": jan.b_salvar,
+                  "atraso": jan.mb_atraso, "formas": jan.mb_formas, "cor": jan.mb_cor,
                   "desfazer": jan.b_desf, "refazer": jan.b_refz}
+        botoes.update({"modo_" + k: b for k, b in jan.b_modo.items()})
+        botoes.update({"cartao_" + k: b for k, b in jan.cartoes.items()})
         botoes.update(jan.ferrs)
         dados = {
             "xid": xid,
             "janela": [jan.get_width(), jan.get_height()],
             "transform": list(jan.get_surface_transform()),
             "botoes": {k: _caixa(b, jan) for k, b in botoes.items() if b.get_mapped()},
+            "estado": {"modo": jan.modo, "atraso": jan.atraso, "atraso_rotulo": jan.lb_atraso.get_label(), "tela": jan.pilha.get_visible_child_name(),
+                       "chip": jan.chip.get_label() if jan.chip.get_mapped() else None,
+                       "dock": jan.dock.get_mapped(), "avisos": jan.n_avisos,
+                       "faixa_avisos": _caixa(jan.toasts, jan), "faixa_alvo": jan.toasts.get_can_target()},
             "editor": {"caixa": _caixa(ed, jan), "zoom": ed.zoom, "ox": ed.ox, "oy": ed.oy,
                        "imagem": [ed.base.get_width(), ed.base.get_height()] if ed.base else None,
-                       "itens": len(ed.itens)},
+                       "itens": len(ed.itens), "tipos": [i["t"] for i in ed.itens]},
         }
         tmp = arq + ".tmp"
         with open(tmp, "w") as f:
@@ -58,3 +65,33 @@ def grava_geometria(jan):
     if arq and not _ativo:
         _ativo = True
         GLib.timeout_add(500, _grava, jan, arq)
+
+
+def grava_overlay(ov):
+    """Posicao dos botoes da barra de modos da sobreposicao (arquivo CAPTURE_TEST_GEOM + .ov<x>x<y>)."""
+    base = os.environ.get("CAPTURE_TEST_GEOM")
+    if not base:
+        return
+    arq = "%s.ov%dx%d" % (base, ov.gx, ov.gy)
+
+    def grava():
+        try:
+            xid = None
+            try:
+                gi.require_version("GdkX11", "4.0")
+                from gi.repository import GdkX11  # noqa: F401
+                xid = ov.get_surface().get_xid()
+            except Exception:
+                pass
+            dados = {"xid": xid, "transform": list(ov.get_surface_transform()),
+                     "botoes": {k: _caixa(b, ov) for k, b in ov.bts.items() if b.get_mapped()},
+                     "dica": _caixa(ov.dica, ov) if ov.dica.get_mapped() else None}
+            tmp = arq + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(dados, f)
+            os.replace(tmp, arq)
+        except Exception:
+            traceback.print_exc()
+        return ov.get_visible()
+
+    GLib.timeout_add(300, grava)

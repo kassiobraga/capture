@@ -60,6 +60,15 @@ def ic_livre(cr):
     cr.stroke()
 
 
+def ic_capturar(cr):
+    cr.set_dash([2.4, 1.8])
+    _ret(cr, 2.2, 2.2, 11.6, 11.6, 2.5)
+    cr.stroke()
+    cr.set_dash([])
+    cr.arc(8, 8, 1.7, 0, 2 * math.pi)
+    cr.fill()
+
+
 def ic_relogio(cr):
     cr.arc(8, 8, 5.5, 0, 2 * math.pi)
     cr.stroke()
@@ -173,7 +182,7 @@ class Icone(Gtk.DrawingArea):
         c = self.get_color()
         cr.set_source_rgba(c.red, c.green, c.blue, c.alpha)
         cr.scale(w / 16, h / 16)
-        cr.set_line_width(1.4)
+        cr.set_line_width(1.6)
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.set_line_join(cairo.LINE_JOIN_ROUND)
         ICONES[self.nome](cr)

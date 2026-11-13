@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Gera docs/captura-editor.png: a janela do editor com uma imagem sintetica e algumas marcacoes.
+"""Gera docs/captura-editor.png (o editor com uma imagem sintetica e algumas marcacoes) e
+docs/captura-inicial.png (o estado vazio da janela principal).
 
 Usa o Capture instalado e os auxiliares dos testes e2e (mouse simulado). So a janela do
 aplicativo e capturada (maim -i), nunca a tela inteira. Uso:  python3 docs/gerar_captura.py
@@ -12,6 +13,8 @@ import time
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, RAIZ)
+
+os.environ.setdefault("CAPTURE_E2E", "1")  # os auxiliares dos testes so ligam com isto
 
 import cairo  # noqa: E402
 
@@ -44,9 +47,26 @@ def imagem_base(caminho, w=640, h=400):
     s.write_to_png(caminho)
 
 
+def inicial():
+    """Estado vazio da janela principal."""
+    app = x.Instancia(geom=True)
+    try:
+        g = app.geometria(com_imagem=False)
+        x.ativa(g["xid"])
+        with x.Entrada() as ent:
+            ent.mover(*ent.origem)
+            time.sleep(1.0)
+            destino = os.path.join(RAIZ, "docs", "captura-inicial.png")
+            subprocess.run(["maim", "-u", "-i", str(g["xid"]), destino], check=True)
+        print("gravado", destino)
+    finally:
+        app.encerra()
+
+
 def main():
     if x.PULAR:
         sys.exit("nao da para gerar: " + x.PULAR)
+    inicial()
     pasta = tempfile.mkdtemp(prefix="capture-doc-")
     base = os.path.join(pasta, "base.png")
     imagem_base(base)
