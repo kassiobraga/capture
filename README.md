@@ -190,7 +190,8 @@ uninstall.sh  remoção
 
 - **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação.
 - **Próxima versão**: gravação de tela (região, janela ou tela inteira), exportando em MP4 ou GIF.
-- **Depois**: suporte a Wayland.
+- **Depois**: suporte a Wayland (captura pelo portal do sistema) e pacote Flatpak,
+  com publicação no Flathub.
 
 ## Licença
 
