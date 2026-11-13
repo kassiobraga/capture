@@ -22,7 +22,7 @@ from .overlay import Sessao
 from . import teste
 from .tema import CLARO, ESCURO, tokens_css
 
-# Identidade: azul-marinho profundo, um unico acento verde-agua e paineis de "vidro"
+# Identidade: cinzas grafite neutros, um unico acento verde-agua e paineis solidos
 # (preenchimento translucido + borda clara de 1 px + sombra suave + raio generoso).
 # Os tokens sao definidos uma vez por tema; o resto deriva deles.
 CSS_BASE = """
@@ -42,8 +42,8 @@ headerbar { background: @cap_surface; color: @cap_text; box-shadow: none;
 .vazio { background: @cap_surface; }
 .tela { background: @cap_canvas; }
 
-.vidro { background: alpha(@cap_raised, 0.78); border: 1px solid @cap_edge; border-radius: 16px;
-         box-shadow: 0 10px 30px alpha(black, 0.35); }
+.vidro { background: @cap_raised; border: 1px solid @cap_edge; border-radius: 12px;
+         box-shadow: 0 2px 8px alpha(black, 0.18); }
 .dock, .pill { padding: 6px 8px; }
 .dock button, .dock menubutton > button, .pill button, .modos button, .atraso > button {
         min-width: 34px; min-height: 34px; padding: 0; border-radius: 10px;
@@ -53,25 +53,28 @@ headerbar { background: @cap_surface; color: @cap_text; box-shadow: none;
 .dock button:checked, .dock menubutton.on > button, .pill button:checked, .modos button:checked {
         background: alpha(@cap_accent, 0.18); color: @cap_accent; }
 .dock separator { background: @cap_edge; min-width: 1px; margin: 6px 4px; }
-.chip { padding: 5px 12px; border-radius: 14px; font-size: 0.86em; margin: 0 0 18px 18px; }
-.dica { padding: 7px 16px; border-radius: 14px; font-size: 0.92em; }
+.chip { padding: 5px 12px; border-radius: 10px; font-size: 0.86em; margin: 0 0 18px 18px; }
+.dica { padding: 7px 16px; border-radius: 12px; font-size: 0.92em; transition: opacity 400ms ease; }
+.dica.some { opacity: 0; }
 
-.modos { background: alpha(@cap_text, 0.06); border-radius: 12px; padding: 3px; }
+.modos { background: none; padding: 0; }
 .modos button { min-width: 38px; min-height: 28px; }
-.atraso > button { min-width: 0; padding: 0 10px; min-height: 30px; background: alpha(@cap_text, 0.06); }
+.atraso > button { min-width: 0; padding: 0 10px; min-height: 30px; background: none; }
 .atraso label { font-weight: 600; font-size: 0.92em; }
 button.capturar { background: @cap_accent; color: @cap_accent_fg; border-radius: 10px; font-weight: 700;
-                  min-height: 32px; padding: 0 14px; box-shadow: none; border: none; }
+                  min-height: 30px; padding: 0 10px; box-shadow: none; border: none; }
 button.capturar:hover { background: shade(@cap_accent, 1.08); }
 headerbar button.discreto { min-width: 34px; min-height: 32px; padding: 0; border-radius: 10px; background: none;
                             box-shadow: none; color: @cap_text; }
 headerbar button.discreto:hover { background: alpha(@cap_text, 0.08); }
 headerbar button.discreto:disabled { opacity: 0.35; }
 
-.cartao { background: alpha(@cap_raised, 0.78); border: 1px solid @cap_edge; border-radius: 16px;
-          padding: 18px 22px; min-width: 110px; box-shadow: 0 10px 30px alpha(black, 0.25); color: @cap_text; }
-.cartao:hover { border-color: alpha(@cap_accent, 0.7); color: @cap_accent; }
-.cartao label { font-weight: 600; }
+headerbar windowcontrols > button, headerbar windowcontrols > button.close { background: none; background-image: none; color: @cap_text; box-shadow: none; }
+headerbar windowcontrols > button:hover { background: alpha(@cap_text, 0.08); }
+.cartao { background: none; border: 1px solid @cap_edge; border-radius: 10px;
+          padding: 10px 14px; min-width: 84px; box-shadow: none; color: @cap_text; }
+.cartao:hover { border-color: alpha(@cap_text, 0.35); background: alpha(@cap_text, 0.04); }
+.cartao label { font-weight: 500; font-size: 0.92em; }
 .amostra { min-width: 26px; min-height: 26px; padding: 0; border-radius: 13px; }
 .sobre { background: @cap_canvas; }
 """
@@ -257,14 +260,14 @@ class Janela(Adw.ApplicationWindow):
                              "A captura é copiada e salva automaticamente.", justify=Gtk.Justification.CENTER)
         aj.add_css_class("mudo")
         vazio.append(aj)
-        cartoes = Gtk.Box(spacing=14, halign=Gtk.Align.CENTER, margin_top=12)
+        cartoes = Gtk.Box(spacing=10, halign=Gtk.Align.CENTER, margin_top=12)
         self.cartoes = {}
         for cod, nome in MODOS:
             b = Gtk.Button()
             b.add_css_class("cartao")
             b.add_css_class("flat")
-            cv = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, halign=Gtk.Align.CENTER)
-            cv.append(Icone(cod, 28))
+            cv = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, halign=Gtk.Align.CENTER)
+            cv.append(Icone(cod, 22))
             cv.append(Gtk.Label(label=nome))
             b.set_child(cv)
             b.set_tooltip_text("Capturar: " + nome)

@@ -19,7 +19,8 @@ quiser, marca por cima antes de colar em outro lugar.
 - Desfazer e refazer.
 - Toda captura nova é copiada para a área de transferência e salva em PNG
   automaticamente, antes de você anotar. Depois de anotar, copie ou salve de novo.
-- Visual próprio: azul-marinho com um acento verde-água e painéis translúcidos.
+- Visual minimalista: cinzas grafite neutros, um único acento verde-água (só no botão
+  Capturar e na ferramenta ou modo ativo) e painéis sólidos com borda fina.
   Tema claro ou escuro, seguindo o tema do Cinnamon (fora do Cinnamon, segue o
   padrão do sistema).
 - Avisos como "Copiado para a área de transferência" e "Salvo em ..." aparecem
@@ -182,6 +183,12 @@ tests/        testes unitários; tests/e2e tem os de ponta a ponta
 install.sh    instalação local
 uninstall.sh  remoção
 ```
+
+## Roadmap
+
+- **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação.
+- **Próxima versão**: gravação de tela (região, janela ou tela inteira), exportando em MP4 ou GIF.
+- **Depois**: suporte a Wayland.
 
 ## Licença
 

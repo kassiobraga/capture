@@ -26,7 +26,7 @@ class Paleta(unittest.TestCase):
         from capture import overlay
         self.assertEqual(overlay.ACENTO, rgb(ESCURO["accent"]))
         self.assertEqual(overlay.SUPERFICIE, rgb(ESCURO["surface"]))
-        self.assertEqual(overlay.FUNDO_ESCURO, rgb(ESCURO["canvas"]))
+        self.assertEqual(overlay.FUNDO_ESCURO, (0.0, 0.0, 0.0))
 
 
 if __name__ == "__main__":

@@ -89,11 +89,11 @@ DICAS = {"ret": "Arraste para selecionar  ·  Esc cancela",
          "livre": "Desenhe em volta da área  ·  Esc cancela"}
 # a sobreposicao e sempre escura (a tela e escurecida): usa a paleta escura do tema
 ACENTO = rgb(ESCURO["accent"])
-FUNDO_ESCURO = rgb(ESCURO["canvas"])
+FUNDO_ESCURO = (0.0, 0.0, 0.0)   # escurecimento neutro
 SUPERFICIE = rgb(ESCURO["surface"])
 
 
-def colchetes(cr, x, y, w, h, c=16):
+def colchetes(cr, x, y, w, h, c=10):
     """Cantos em L (so tracado, sem pintar) nos quatro cantos do retangulo."""
     c = max(2, min(c, w / 2, h / 2))
     for cx, cy, dx, dy in ((x, y, 1, 1), (x + w, y, -1, 1), (x + w, y + h, -1, -1), (x, y + h, 1, -1)):
@@ -163,6 +163,18 @@ class Sobreposicao(Gtk.Window):
         self.fullscreen_on_monitor(monitor)
         teste.grava_overlay(self)
 
+    def _mostra_dica(self):
+        """A dica aparece e some sozinha 2 s depois (continua nao-alvo do ponteiro)."""
+        self.dica.remove_css_class("some")
+        if getattr(self, "_t_dica", None):
+            GLib.source_remove(self._t_dica)
+        self._t_dica = GLib.timeout_add(2000, self._some_dica)
+
+    def _some_dica(self):
+        self._t_dica = None
+        self.dica.add_css_class("some")
+        return False
+
     def sincroniza(self):
         self._trava = True
         self.bts[self.s.modo].set_active(True)
@@ -170,6 +182,7 @@ class Sobreposicao(Gtk.Window):
         self.dica.set_label(DICAS.get(self.s.modo, ""))
         self.pill.set_visible(True)
         self.dica.set_visible(True)
+        self._mostra_dica()
         self.ini = self.fim = self.alvo = None
         self.caminho = []
         self.area.queue_draw()
@@ -230,6 +243,7 @@ class Sobreposicao(Gtk.Window):
             self.caminho = []
             self.pill.set_visible(True)
             self.dica.set_visible(True)
+            self._mostra_dica()
             self.area.queue_draw()
             return
         a, b = self._px(x0, y0)
@@ -251,7 +265,7 @@ class Sobreposicao(Gtk.Window):
 
     def _desenha(self, _a, cr, w, h):
         self._tela(cr)
-        cr.set_source_rgba(*FUNDO_ESCURO, 0.55)
+        cr.set_source_rgba(*FUNDO_ESCURO, 0.45)
         cr.paint()
         modo = self.s.modo
         caixa = None
@@ -277,11 +291,11 @@ class Sobreposicao(Gtk.Window):
         cr.restore()
         cr.append_path(caminho)
         cr.set_source_rgb(*ACENTO)
-        cr.set_line_width(2)
+        cr.set_line_width(1.5)
         cr.set_line_join(cairo.LINE_JOIN_MITER)
         cr.stroke()
         if caixa and caixa[2] > 0:
-            cr.set_line_width(4)
+            cr.set_line_width(2)
             cr.set_line_cap(cairo.LINE_CAP_SQUARE)
             colchetes(cr, *caixa)
             cr.stroke()
@@ -297,10 +311,10 @@ class Sobreposicao(Gtk.Window):
             _ret(cr, bx, by, tw + 20, th + 10, 9)
             cr.set_source_rgba(*SUPERFICIE, 0.9)
             cr.fill_preserve()
-            cr.set_source_rgba(*ACENTO, 0.45)
+            cr.set_source_rgba(1, 1, 1, 0.12)
             cr.set_line_width(1)
             cr.stroke()
-            cr.set_source_rgb(*ACENTO)
+            cr.set_source_rgb(*rgb(ESCURO["text"]))
             cr.move_to(bx + 10, by + 5)
             PangoCairo.show_layout(cr, lay)
 
