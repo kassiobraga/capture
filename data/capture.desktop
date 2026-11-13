@@ -1,0 +1,30 @@
+# capture-install-marker: io.github.kassiobraga.Capture
+[Desktop Entry]
+Type=Application
+Name=Capture
+GenericName=Captura de tela
+Comment=Capturar, recortar e anotar a tela
+Exec=@BIN@
+Icon=io.github.kassiobraga.Capture
+Terminal=false
+StartupNotify=true
+StartupWMClass=capture
+Categories=Utility;Graphics;
+Keywords=captura;print;screenshot;recorte;tela;screen;
+Actions=Area;Janela;Tela;Livre;
+
+[Desktop Action Area]
+Exec=@BIN@ --novo --modo ret
+Name=Capturar uma área
+
+[Desktop Action Janela]
+Exec=@BIN@ --novo --modo janela
+Name=Capturar uma janela
+
+[Desktop Action Tela]
+Exec=@BIN@ --novo --modo tela
+Name=Capturar a tela inteira
+
+[Desktop Action Livre]
+Exec=@BIN@ --novo --modo livre
+Name=Capturar em forma livre
