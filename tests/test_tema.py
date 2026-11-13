@@ -1,0 +1,47 @@
+"""tema_escuro nao pode abortar o processo quando o esquema do Cinnamon nao existe."""
+import os
+import subprocess
+import sys
+import unittest
+
+RAIZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+
+
+class Tema(unittest.TestCase):
+    def rodar(self, codigo):
+        # em subprocesso: se o GLib abortar (g_error), o teste falha em vez de derrubar o runner
+        return subprocess.run([sys.executable, "-c", codigo], cwd=RAIZ, capture_output=True, text=True,
+                              env=dict(os.environ, PYTHONPATH=RAIZ))
+
+    def test_esquema_inexistente_devolve_none(self):
+        r = self.rodar("from capture.app import tema_escuro\n"
+                       "print(tema_escuro('org.exemplo.nao.existe'))")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "None")
+
+    def test_chave_inexistente_devolve_none(self):
+        r = self.rodar("from capture.app import tema_escuro\n"
+                       "print(tema_escuro('org.gnome.desktop.interface', 'chave-que-nao-existe'))")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "None")
+
+    def test_esquema_real_devolve_booleano_ou_none(self):
+        r = self.rodar("from capture.app import tema_escuro\n"
+                       "print(tema_escuro('org.cinnamon.desktop.interface'))")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(r.stdout.strip(), ("True", "False", "None"))
+
+
+
+class Caminho(unittest.TestCase):
+    def test_decodifica_opcao_filename(self):
+        sys.path.insert(0, RAIZ)
+        from capture.app import decodifica_caminho
+        self.assertEqual(decodifica_caminho(list(b"/tmp/a b.png\0")), "/tmp/a b.png")
+        self.assertEqual(decodifica_caminho(b"rel.png"), "rel.png")
+        self.assertEqual(decodifica_caminho("x.png"), "x.png")
+        self.assertEqual(decodifica_caminho(list("ação.png".encode())), "ação.png")
+
+
+if __name__ == "__main__":
+    unittest.main()
