@@ -270,7 +270,7 @@ class Editor(Modelo, Gtk.DrawingArea):
         for i in range(1, 9):   # sombra suave: camadas translucidas crescentes
             g = i * 2.2 / self.zoom
             _ret(cr, -g, -g + 5 / self.zoom, iw + 2 * g, ih + 2 * g, raio + g)
-            cr.set_source_rgba(0, 0, 0, 0.045)
+            cr.set_source_rgba(0, 0, 0, 0.018)   # leve, para funcionar no tema claro
             cr.fill()
         cr.save()
         _ret(cr, 0, 0, iw, ih, raio)   # so a imagem tem cantos arredondados

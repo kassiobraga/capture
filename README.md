@@ -4,9 +4,10 @@ Captura de tela e anotação para Linux, feita em Python com GTK 4 e libadwaita.
 Você aperta Print, seleciona o que quer, e a imagem já fica copiada e salva. Se
 quiser, marca por cima antes de colar em outro lugar.
 
-![Janela inicial do Capture, com os quatro modos de captura](docs/captura-inicial.png)
-
-![Editor do Capture com uma imagem de exemplo e algumas marcações](docs/captura-editor.png)
+| Dark | Clean |
+|---|---|
+| ![Janela inicial do Capture no tema escuro](docs/captura-inicial.png) | ![Janela inicial do Capture no tema claro](docs/captura-inicial-claro.png) |
+| ![Editor do Capture no tema escuro, com marcações](docs/captura-editor.png) | ![Editor do Capture no tema claro, com marcações](docs/captura-editor-claro.png) |
 
 ## Recursos
 
@@ -21,8 +22,9 @@ quiser, marca por cima antes de colar em outro lugar.
   automaticamente, antes de você anotar. Depois de anotar, copie ou salve de novo.
 - Visual minimalista: cinzas grafite neutros, um único acento verde-água (só no botão
   Capturar e na ferramenta ou modo ativo) e painéis sólidos com borda fina.
-  Tema claro ou escuro, seguindo o tema do Cinnamon (fora do Cinnamon, segue o
-  padrão do sistema).
+  Tema escuro (Dark) e claro (Clean), seguindo o tema do Cinnamon (fora do
+  Cinnamon, segue o padrão do sistema). Para fixar um deles, inicie com
+  `CAPTURE_TEMA=escuro` ou `CAPTURE_TEMA=claro`.
 - Avisos como "Copiado para a área de transferência" e "Salvo em ..." aparecem
   como mensagens passageiras; o tamanho da imagem fica num selo no canto.
 

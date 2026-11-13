@@ -21,6 +21,10 @@ import cairo  # noqa: E402
 from tests.e2e import x  # noqa: E402
 
 
+# CAPTURE_TEMA=claro gera as versoes "-claro"; sem ele, as escuras (nomes originais).
+SUFIXO = "-claro" if os.environ.get("CAPTURE_TEMA", "").lower() in ("claro", "clean", "light") else ""
+
+
 def imagem_base(caminho, w=640, h=400):
     s = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
     cr = cairo.Context(s)
@@ -56,7 +60,7 @@ def inicial():
         with x.Entrada() as ent:
             ent.mover(*ent.origem)
             time.sleep(1.0)
-            destino = os.path.join(RAIZ, "docs", "captura-inicial.png")
+            destino = os.path.join(RAIZ, "docs", "captura-inicial%s.png" % SUFIXO)
             subprocess.run(["maim", "-u", "-i", str(g["xid"]), destino], check=True)
         print("gravado", destino)
     finally:
@@ -105,7 +109,7 @@ def main():
             ent.arrastar([tela(40, 330), tela(120, 350), tela(200, 325), tela(280, 350)])
             ent.mover(*ent.origem)   # tira o ponteiro de cima da janela
             time.sleep(0.8)
-            destino = os.path.join(RAIZ, "docs", "captura-editor.png")
+            destino = os.path.join(RAIZ, "docs", "captura-editor%s.png" % SUFIXO)
             subprocess.run(["maim", "-u", "-i", str(g["xid"]), destino], check=True)
         jan.fecha()
         print("gravado", destino)

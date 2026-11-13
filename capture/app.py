@@ -557,7 +557,13 @@ class App(Adw.Application):
 
     def do_startup(self):
         Adw.Application.do_startup(self)
-        escuro = tema_escuro()
+        escolha = os.environ.get("CAPTURE_TEMA", "").strip().lower()
+        if escolha in ("escuro", "dark"):
+            escuro = True
+        elif escolha in ("claro", "clean", "light"):
+            escuro = False
+        else:  # sistema
+            escuro = tema_escuro()
         if escuro is None:  # sem o esquema do Cinnamon: segue o padrao do sistema
             escuro = Adw.StyleManager.get_default().get_dark()
         else:
