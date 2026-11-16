@@ -20,57 +20,23 @@ O workflow anexa `Capture.flatpak` ao release `v1.0.1`. Quem baixar dá dois
 cliques e instala. **Limite:** um arquivo baixado assim não se atualiza
 sozinho; a pessoa baixa a versão nova e instala de novo por cima.
 
-## 2. Flathub: a loja, com atualização automática
+## 2. Flathub: regras sobre IA
 
-O Flathub é a loja de aplicativos Flatpak. Ela aparece dentro do Gerenciador de
-Aplicativos do Linux Mint, do GNOME Software (Ubuntu, Fedora) e do Discover
-(KDE). Publicado lá, o Capture pode ser buscado pelo nome, instalado com um
-clique e atualizado junto com o resto do sistema.
+O Flathub (a loja que aparece no Gerenciador de Aplicativos do Mint) tem uma
+[política sobre IA generativa](https://docs.flathub.org/docs/for-app-authors/requirements#generative-ai-policy):
 
-### Primeira submissão (uma vez)
+- O manifesto enviado ao Flathub não pode ser gerado nem editado por IA.
+- O pull request de submissão, o texto dele e as respostas aos revisores não
+  podem ser feitos ou automatizados por IA.
+- Material gerado por IA no próprio aplicativo (código, documentação, o
+  manifesto deste repositório) precisa ser declarado no pedido, com as partes
+  afetadas e a extensão aproximada.
+- O projeto precisa ter histórico de desenvolvimento, uso real e compromisso de
+  manutenção.
 
-1. Faça o merge deste trabalho na `main` e crie a tag `v1.0.1` (passo acima).
-   As imagens de `docs/` precisam estar na `main`: a loja as mostra.
-2. No GitHub, faça um fork de <https://github.com/flathub/flathub>, crie um
-   branch a partir de `new-pr` e acrescente na raiz o arquivo
-   `io.github.kassiobraga.Capture.yml`: uma cópia de
-   `flatpak/io.github.kassiobraga.Capture.yml` em que a fonte do módulo
-   `capture` (o bloco `type: dir`) vira:
-
-   ```yaml
-       sources:
-         - type: git
-           url: https://github.com/kassiobraga/capture.git
-           tag: v1.0.1
-           commit: <hash completo do commit da tag>   # git rev-parse v1.0.1^{commit}
-   ```
-
-3. Abra um pull request para o branch `new-pr` do `flathub/flathub`, com o
-   título "Add io.github.kassiobraga.Capture". O robô de lá constrói o pacote
-   e os revisores comentam no PR.
-4. Pontos que os revisores costumam perguntar, já com as respostas:
-   - **Por que `--socket=x11`, sem Wayland?** O Capture fotografa a tela e
-     desenha a seleção por cima de todas as janelas, o que o Wayland não
-     permite a aplicativos comuns. O suporte a Wayland, pelo portal de
-     captura, está no roadmap.
-   - **Por que `--filesystem=xdg-pictures`?** Toda captura é salva
-     automaticamente em `~/Imagens/Capturas`.
-   - **Por que `--env=GSK_RENDERER=cairo`?** Com driver NVIDIA, os
-     renderizadores GL e Vulkan do GTK falham dentro do sandbox em X11
-     (BadDrawable) e a janela não abre. O Capture só desenha em 2D, então o
-     renderizador Cairo basta e funciona em qualquer placa.
-   - **O id `io.github.kassiobraga`** corresponde à conta do GitHub dona do
-     repositório; o Flathub pede para verificar isso no site dele depois da
-     aprovação.
-5. Aprovado, o Flathub cria o repositório
-   `github.com/flathub/io.github.kassiobraga.Capture` e dá acesso a você.
-
-### Cada versão nova
-
-1. Faça o passo 1 da seção anterior (versão, `<release>` e tag).
-2. No repositório `flathub/io.github.kassiobraga.Capture`, troque `tag` e
-   `commit` no manifesto e abra um pull request. Quando o build passar, faça o
-   merge: em algumas horas todos os usuários recebem a atualização.
+Por isso a submissão ao Flathub, se feita, é trabalho manual do mantenedor:
+manifesto escrito à mão, pull request aberto e conduzido sem ferramentas de IA,
+e a declaração do código gerado com IA neste projeto.
 
 ## Limitações conhecidas do pacote Flatpak
 
