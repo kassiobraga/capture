@@ -55,6 +55,10 @@ clique e atualizado junto com o resto do sistema.
      captura, está no roadmap.
    - **Por que `--filesystem=xdg-pictures`?** Toda captura é salva
      automaticamente em `~/Imagens/Capturas`.
+   - **Por que `--env=GSK_RENDERER=cairo`?** Com driver NVIDIA, os
+     renderizadores GL e Vulkan do GTK falham dentro do sandbox em X11
+     (BadDrawable) e a janela não abre. O Capture só desenha em 2D, então o
+     renderizador Cairo basta e funciona em qualquer placa.
    - **O id `io.github.kassiobraga`** corresponde à conta do GitHub dona do
      repositório; o Flathub pede para verificar isso no site dele depois da
      aprovação.
