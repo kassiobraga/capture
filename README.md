@@ -215,8 +215,14 @@ uninstall.sh  remoção
 
 ## Roadmap
 
-- **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação.
-- **Próxima versão**: gravação de tela (região, janela ou tela inteira), exportando em MP4 ou GIF.
+- **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação,
+  em pacote Flatpak com tudo incluso.
+- **1.1**: salvar em PNG, JPEG ou PDF; edição simples (redimensionar em pixels ou
+  %, borrar/pixelar, girar); capturas em abas, com "juntar abas em PDF".
+- **1.2**: histórico das capturas num painel lateral, limpeza diária da lista e
+  modo anônimo (não registra no histórico).
+- **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou GIF.
+- **1.4**: captura rolável, para páginas e janelas mais compridas que a tela.
 - **Depois**: suporte a Wayland (captura pelo portal do sistema).
 
 ## Licença
