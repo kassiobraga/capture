@@ -35,25 +35,51 @@ Limites conhecidos:
 - A borracha apaga a marcação que você clicar (o traço da forma, não o miolo
   dela); um arraste da borracha conta como um único passo de desfazer.
 
-## Requisitos
+## Instalação fácil (Flatpak)
+
+O jeito recomendado: um único arquivo, com tudo dentro. Não precisa instalar
+`maim`, `xclip`, Python nem GTK à parte.
+
+1. Baixe `Capture.flatpak` na página de
+   [Releases](https://github.com/kassiobraga/capture/releases).
+2. Dê dois cliques no arquivo (abre o Gerenciador de Aplicativos) ou, no terminal:
+
+   ```sh
+   flatpak install --user Capture.flatpak
+   ```
+
+O Linux Mint, o Fedora e o Pop!_OS já vêm com Flatpak. No Ubuntu, instale uma vez
+com `sudo apt install flatpak`.
+
+Para a tecla Print abrir o Capture, crie um atalho de teclado personalizado com o
+comando `flatpak run io.github.kassiobraga.Capture --novo` (no Cinnamon:
+Configurações do sistema → Teclado → Atalhos → Atalhos personalizados).
+
+As capturas vão para `~/Imagens/Capturas`, como na instalação manual. Para
+publicar no Flathub (a loja, com atualização automática), veja
+[docs/FLATHUB.md](docs/FLATHUB.md).
+
+## Instalação manual (desenvolvimento)
+
+### Requisitos
 
 - **X11.** Wayland não é suportado por enquanto: a captura usa `maim` e a
   seleção depende de janelas X11.
 - Python 3.10 ou mais novo (testado apenas com 3.12), **GTK 4.12 ou mais novo** e
   **libadwaita 1.4 ou mais nova**. O instalador confere as versões.
-- `maim` e `xclip`. `xprop` e `xwininfo` (pacote `x11-utils`) são usados no
-  modo "janela". `rsvg-convert` é opcional e só gera os ícones PNG na instalação.
+- `python3-xlib`, ou então `maim` e `xclip` e, para o modo "janela", `xprop` e
+  `xwininfo` (pacote `x11-utils`). `rsvg-convert` é opcional e só gera os ícones PNG na instalação.
 
 No Debian, Ubuntu e Linux Mint:
 
 ```sh
 sudo apt install python3-gi python3-gi-cairo python3-cairo \
-    gir1.2-gtk-4.0 gir1.2-adw-1 maim xclip x11-utils librsvg2-bin
+    gir1.2-gtk-4.0 gir1.2-adw-1 python3-xlib xclip librsvg2-bin
 ```
 
 Desenvolvido e testado no Linux Mint 22 com Cinnamon 6.
 
-## Instalação
+### Instalação
 
 A instalação é só para o seu usuário, em `~/.local`, sem sudo:
 
@@ -178,7 +204,8 @@ As imagens desta página foram geradas por `docs/gerar_captura.py`.
 
 ```
 capture/      pacote Python (app, overlay, editor, icons, x11, arquivos)
-data/         ícone SVG e modelo do .desktop
+data/         ícone SVG, modelo do .desktop e metainfo (AppStream)
+flatpak/      manifesto do pacote Flatpak
 docs/         imagens do README e o script que as gera
 scripts/      funções do atalho do Cinnamon usadas pelos scripts de instalação
 tests/        testes unitários; tests/e2e tem os de ponta a ponta
@@ -190,8 +217,7 @@ uninstall.sh  remoção
 
 - **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação.
 - **Próxima versão**: gravação de tela (região, janela ou tela inteira), exportando em MP4 ou GIF.
-- **Depois**: suporte a Wayland (captura pelo portal do sistema) e pacote Flatpak,
-  com publicação no Flathub.
+- **Depois**: suporte a Wayland (captura pelo portal do sistema).
 
 ## Licença
 

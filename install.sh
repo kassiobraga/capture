@@ -82,15 +82,19 @@ PY
         *) faltam="$faltam python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-pango-1.0" ;;
     esac
 fi
-command -v maim >/dev/null 2>&1 || faltam="$faltam maim"
-command -v xclip >/dev/null 2>&1 || faltam="$faltam xclip"
+# Com python3-xlib o Capture fotografa a tela e copia sozinho; sem ele, usa maim e xclip.
+if ! python3 -c "import Xlib" >/dev/null 2>&1; then
+    if ! command -v maim >/dev/null 2>&1 || ! command -v xclip >/dev/null 2>&1; then
+        faltam="$faltam python3-xlib"
+    fi
+    if ! command -v xprop >/dev/null 2>&1 || ! command -v xwininfo >/dev/null 2>&1; then
+        echo "aviso: sem python3-xlib nem xprop/xwininfo (pacote x11-utils) o modo 'janela' nao encontra janelas." >&2
+    fi
+fi
 if [ -n "$faltam" ]; then
-    echo "Faltam dependencias. No Debian/Ubuntu/Mint:" >&2
+    echo "Faltam dependencias (ou instale o Capture pelo Flatpak, que ja traz tudo). No Debian/Ubuntu/Mint:" >&2
     echo "  sudo apt install$faltam" >&2
     exit 1
-fi
-if ! command -v xprop >/dev/null 2>&1 || ! command -v xwininfo >/dev/null 2>&1; then
-    echo "aviso: sem xprop/xwininfo (pacote x11-utils) o modo 'janela' nao encontra janelas." >&2
 fi
 if [ "${XDG_SESSION_TYPE:-x11}" = wayland ]; then
     echo "aviso: sessao Wayland detectada. O Capture so funciona em X11 por enquanto." >&2
