@@ -422,6 +422,8 @@ class Janela(Adw.ApplicationWindow):
             atraso = self.atraso
         self._visivel = self.get_visible()
         self.set_visible(False)
+        if self._visivel:
+            atraso += 0.35  # tempo para o Cinnamon terminar de esconder a janela antes da foto
         self.sessao = Sessao(self.get_application(), modo, atraso, self._capturou)
 
     def _capturou(self, img, erro=None):

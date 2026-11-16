@@ -3,8 +3,11 @@
 Usa python-xlib quando ele esta disponivel (e o caso do pacote Flatpak, que nao
 tem maim, xprop nem xwininfo). Sem ele, cai nos programas externos.
 """
+import ctypes
+import ctypes.util
 import re
 import subprocess
+import sys
 
 try:
     from Xlib import X, display as xdisplay, xauth
@@ -40,15 +43,96 @@ def tem_xlib():
     return X is not None
 
 
+def tem_captura():
+    """Ha como fotografar a tela sem o maim (libX11 ou python-xlib)?"""
+    if X is not None:
+        return True
+    try:
+        _libx11()
+        return True
+    except OSError:
+        return False
+
+
 # ---------------------------------------------------------------- foto da tela
 
-def foto_da_tela():
-    """cairo.ImageSurface (RGB24) com todos os monitores, sem o cursor.
+class _XImage(ctypes.Structure):
+    _fields_ = [("width", ctypes.c_int), ("height", ctypes.c_int), ("xoffset", ctypes.c_int),
+                ("format", ctypes.c_int), ("data", ctypes.c_void_p), ("byte_order", ctypes.c_int),
+                ("bitmap_unit", ctypes.c_int), ("bitmap_bit_order", ctypes.c_int),
+                ("bitmap_pad", ctypes.c_int), ("depth", ctypes.c_int), ("bytes_per_line", ctypes.c_int),
+                ("bits_per_pixel", ctypes.c_int), ("red_mask", ctypes.c_ulong),
+                ("green_mask", ctypes.c_ulong), ("blue_mask", ctypes.c_ulong),
+                ("obdata", ctypes.c_void_p), ("f", ctypes.c_void_p * 6)]
 
-    Levanta excecao se nao for possivel (sem python-xlib, sem display, formato de
-    pixel inesperado); quem chama pode entao tentar o maim.
-    """
+
+_erro_x = []
+_TRATA_ERRO = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p)(
+    lambda _d, _e: _erro_x.append(1) or 0)  # sem isto, um erro do X encerraria o processo
+
+
+def _libx11():
+    nome = ctypes.util.find_library("X11") or "libX11.so.6"
+    x = ctypes.CDLL(nome)
+    x.XOpenDisplay.restype = ctypes.c_void_p
+    x.XOpenDisplay.argtypes = [ctypes.c_char_p]
+    for f in ("XDefaultScreen", "XCloseDisplay", "XSync"):
+        getattr(x, f).argtypes = [ctypes.c_void_p] + ([ctypes.c_int] if f == "XSync" else [])
+    x.XRootWindow.restype = ctypes.c_ulong
+    x.XRootWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    x.XDisplayWidth.argtypes = x.XDisplayHeight.argtypes = [ctypes.c_void_p, ctypes.c_int]
+    x.XGetImage.restype = ctypes.POINTER(_XImage)
+    x.XGetImage.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int, ctypes.c_uint,
+                            ctypes.c_uint, ctypes.c_ulong, ctypes.c_int]
+    x.XSetErrorHandler.restype = ctypes.c_void_p
+    x.XSetErrorHandler.argtypes = [ctypes.c_void_p]
+    return x
+
+
+def _para_cairo(dados, w, h, passo_origem):
     import cairo
+    img = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
+    destino, passo = img.get_data(), img.get_stride()
+    if passo == passo_origem:
+        destino[:h * passo] = dados[:h * passo]
+    else:
+        n = w * 4
+        for i in range(h):
+            destino[i * passo:i * passo + n] = dados[i * passo_origem:i * passo_origem + n]
+    img.mark_dirty()
+    return img
+
+
+def _foto_libx11():
+    """Tela inteira num unico XGetImage, pela libX11 (rapido; a mesma que o GTK usa)."""
+    x = _libx11()
+    d = x.XOpenDisplay(None)
+    if not d:
+        raise RuntimeError("nao foi possivel abrir o display X")
+    anterior = x.XSetErrorHandler(ctypes.cast(_TRATA_ERRO, ctypes.c_void_p))
+    try:
+        tela = x.XDefaultScreen(d)
+        w, h = x.XDisplayWidth(d, tela), x.XDisplayHeight(d, tela)
+        del _erro_x[:]
+        im = x.XGetImage(d, x.XRootWindow(d, tela), 0, 0, w, h, ctypes.c_ulong(-1).value, 2)  # ZPixmap
+        x.XSync(d, 0)
+        if not im or _erro_x:
+            raise RuntimeError("o servidor X recusou a captura")
+        try:
+            r = im.contents
+            if r.bits_per_pixel != 32 or r.byte_order != 0 or r.depth not in (24, 32):
+                raise RuntimeError("formato de pixel nao suportado (%d bpp)" % r.bits_per_pixel)
+            dados = ctypes.string_at(r.data, r.bytes_per_line * h)
+            return _para_cairo(dados, w, h, r.bytes_per_line)
+        finally:
+            ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)(im.contents.f[1])(im)  # destroy_image
+    finally:
+        x.XSetErrorHandler(anterior)
+        x.XCloseDisplay(d)
+
+
+def _foto_xlib():
+    """Mesma coisa pelo python-xlib: mais lento em telas grandes, usado se a libX11 falhar."""
     if X is None:
         raise RuntimeError("python-xlib nao esta instalado")
     d = _abre()
@@ -59,22 +143,26 @@ def foto_da_tela():
         bpp = {f.depth: f.bits_per_pixel for f in d.display.info.pixmap_formats}.get(geo.depth)
         if geo.depth not in (24, 32) or bpp != 32 or d.display.info.image_byte_order != X.LSBFirst:
             raise RuntimeError("formato de pixel nao suportado (profundidade %d)" % geo.depth)
-        img = cairo.ImageSurface(cairo.FORMAT_RGB24, w, h)
-        destino, passo = img.get_data(), img.get_stride()
-        # Em faixas: uma resposta do X tem tamanho limitado e faixas aliviam a memoria.
-        faixa = max(1, (8 << 20) // (w * 4))
-        for y in range(0, h, faixa):
-            fh = min(faixa, h - y)
-            dados = raiz.get_image(0, y, w, fh, X.ZPixmap, 0xFFFFFFFF).data
-            if passo == w * 4:
-                destino[y * passo:(y + fh) * passo] = dados
-            else:
-                for i in range(fh):
-                    destino[(y + i) * passo:(y + i) * passo + w * 4] = dados[i * w * 4:(i + 1) * w * 4]
-        img.mark_dirty()
-        return img
+        # Um unico pedido: o servidor copia a tela de uma vez (em faixas, cada faixa saia de
+        # um instante diferente e um redesenho no meio deixava listras na captura).
+        dados = raiz.get_image(0, 0, w, h, X.ZPixmap, 0xFFFFFFFF).data
+        return _para_cairo(dados, w, h, w * 4)
     finally:
         d.close()
+
+
+def foto_da_tela():
+    """cairo.ImageSurface (RGB24) com todos os monitores, sem o cursor.
+
+    Levanta excecao se nao for possivel; quem chama pode entao tentar o maim.
+    """
+    try:
+        return _foto_libx11()
+    except Exception as e:
+        if X is None:
+            raise
+        print("libX11 nao capturou a tela (%s); usando python-xlib" % e, file=sys.stderr)
+        return _foto_xlib()
 
 
 # ---------------------------------------------------------------- janelas

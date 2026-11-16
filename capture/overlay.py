@@ -323,7 +323,7 @@ class Sobreposicao(Gtk.Window):
 def foto():
     """Foto da tela inteira: python-xlib (dentro do Flatpak) ou, sem ele, o maim."""
     erro_xlib = None
-    if x11.tem_xlib():
+    if x11.tem_captura():
         try:
             return x11.foto_da_tela()
         except Exception as e:

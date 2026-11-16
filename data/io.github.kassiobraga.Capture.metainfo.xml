@@ -79,6 +79,11 @@
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
+    <release version="1.1.1" date="2026-11-16">
+      <description>
+        <p>Fixes stripes of the desktop wallpaper appearing in some captures. Full-screen capture is also about ten times faster on large screens.</p>
+      </description>
+    </release>
     <release version="1.1.0" date="2026-11-16">
       <description>
         <p>Captures open in tabs, and all tabs can be joined into a single PDF. Save as PNG, JPEG or PDF. New pixelate tool, rotate and resize.</p>

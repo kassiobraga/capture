@@ -29,6 +29,11 @@ class Xlib(unittest.TestCase):
         d.close()
         self.assertEqual((img.get_width(), img.get_height()), (geo.width, geo.height))
 
+    def test_libx11_e_python_xlib_dao_a_mesma_imagem(self):
+        a, b = x11._foto_libx11(), x11._foto_xlib()
+        self.assertEqual((a.get_width(), a.get_height()), (b.get_width(), b.get_height()))
+        self.assertEqual(bytes(a.get_data()), bytes(b.get_data()))
+
     def test_listar_janelas_nao_falha(self):
         self.assertIsInstance(x11.listar_janelas(), list)
 
