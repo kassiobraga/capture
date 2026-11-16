@@ -1,5 +1,12 @@
-# Gera o pacote Flatpak a cada envio. Numa tag "v*" (ex.: v1.0.0) o arquivo
-# Capture.flatpak tambem e anexado a um release do GitHub, pronto para baixar.
+# Pacote Flatpak do Capture.
+#
+# - Em todo envio: monta o repositorio Flatpak (com uma chave descartavel, se a
+#   chave de verdade nao estiver configurada) e deixa Capture.flatpak como
+#   artefato, para testar.
+# - Numa tag "v*" (ex.: v1.0.2), ou rodando o workflow a mao na main: assina com a
+#   chave do projeto (segredo FLATPAK_GPG_KEY) e publica o repositorio no GitHub
+#   Pages (branch gh-pages). Quem instalou pelo link recebe a atualizacao sozinho.
+#   Na tag, Capture.flatpak tambem vai para o release.
 name: Flatpak
 
 on:
@@ -12,6 +19,13 @@ on:
 permissions:
   contents: write
 
+env:
+  APP_ID: io.github.kassiobraga.Capture
+  MANIFESTO: flatpak/io.github.kassiobraga.Capture.yml
+  RAMO: stable
+  URL_SITE: https://kassiobraga.github.io/capture
+  RUNTIME_REPO: https://dl.flathub.org/repo/flathub.flatpakrepo
+
 jobs:
   flatpak:
     runs-on: ubuntu-latest
@@ -21,15 +35,92 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Construir o Flatpak
-        uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
-        with:
-          bundle: Capture.flatpak
-          manifest-path: flatpak/io.github.kassiobraga.Capture.yml
-          cache-key: flatpak-builder-${{ github.sha }}
+      - name: Chave de assinatura
+        env:
+          CHAVE: ${{ secrets.FLATPAK_GPG_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -p -m 700 "$GNUPGHOME"
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+          if [ -n "$CHAVE" ]; then
+            printf '%s\n' "$CHAVE" | gpg --batch --import
+            echo "CHAVE_REAL=1" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Segredo FLATPAK_GPG_KEY ausente: usando chave descartavel (nada sera publicado)."
+            gpg --batch --pinentry-mode loopback --passphrase '' \
+              --quick-gen-key "Capture teste <teste@invalid>" rsa4096 sign never
+            echo "CHAVE_REAL=0" >> "$GITHUB_ENV"
+          fi
+          ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          echo "CHAVE_ID=$ID" >> "$GITHUB_ENV"
+          gpg --export "$ID" > "$RUNNER_TEMP/chave.gpg"
 
-      - name: Publicar no release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Construir e assinar o repositorio
+        run: |
+          flatpak remote-add --user --if-not-exists flathub "$RUNTIME_REPO"
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse \
+            --force-clean --default-branch="$RAMO" \
+            --repo=site/repo --gpg-sign="$CHAVE_ID" --gpg-homedir="$GNUPGHOME" \
+            build-dir "$MANIFESTO"
+          flatpak build-update-repo --title="Capture" --default-branch="$RAMO" \
+            --gpg-sign="$CHAVE_ID" --gpg-homedir="$GNUPGHOME" \
+            --generate-static-deltas --prune site/repo
+
+      - name: Arquivo instalavel e links de instalacao
+        run: |
+          # O pacote aponta para o repositorio: quem instala por ele tambem recebe atualizacoes.
+          # Com a chave descartavel, o pacote de teste nao aponta para o repositorio publicado.
+          if [ "$CHAVE_REAL" = 1 ]; then
+            flatpak build-bundle --runtime-repo="$RUNTIME_REPO" --repo-url="$URL_SITE/repo/" \
+              --gpg-keys="$RUNNER_TEMP/chave.gpg" site/repo Capture.flatpak "$APP_ID" "$RAMO"
+          else
+            flatpak build-bundle --runtime-repo="$RUNTIME_REPO" site/repo Capture.flatpak "$APP_ID" "$RAMO"
+          fi
+          CHAVE_B64=$(base64 -w0 "$RUNNER_TEMP/chave.gpg")
+          cat > "site/$APP_ID.flatpakref" <<EOF
+          [Flatpak Ref]
+          Name=$APP_ID
+          Branch=$RAMO
+          Title=Capture
+          IsRuntime=false
+          Url=$URL_SITE/repo/
+          SuggestRemoteName=capture
+          Homepage=https://github.com/kassiobraga/capture
+          RuntimeRepo=$RUNTIME_REPO
+          GPGKey=$CHAVE_B64
+          EOF
+          cat > site/capture.flatpakrepo <<EOF
+          [Flatpak Repo]
+          Title=Capture
+          Url=$URL_SITE/repo/
+          Homepage=https://github.com/kassiobraga/capture
+          Comment=Repositorio do Capture
+          GPGKey=$CHAVE_B64
+          EOF
+          cp flatpak/site/index.html site/index.html
+          cp data/capture.svg site/capture.svg
+          cp Capture.flatpak site/Capture.flatpak
+          touch site/.nojekyll
+
+      - name: Guardar o pacote (teste)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capture-x86_64.flatpak
+          path: Capture.flatpak
+
+      - name: Publicar no GitHub Pages
+        if: env.CHAVE_REAL == '1' && (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
+          enable_jekyll: false
+          commit_message: "Repositorio Flatpak: ${{ github.ref_name }}"
+
+      - name: Anexar ao release
+        if: env.CHAVE_REAL == '1' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: Capture.flatpak

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capture</title>
+<meta name="description" content="Captura de tela e anotação para Linux. Instale com um clique e receba as atualizações automaticamente.">
+<link rel="icon" href="capture.svg" type="image/svg+xml">
+<style>
+  :root {
+    --fundo: #F7F7F8; --cartao: #FFFFFF; --texto: #1C1C1E; --mudo: #5B5B60;
+    --borda: rgba(28, 28, 30, 0.10); --acento: #0E9F7C; --acento-texto: #FFFFFF;
+    --codigo: #EDEDEF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fundo: #141416; --cartao: #1C1C1E; --texto: #ECECEE; --mudo: #A0A0A6;
+      --borda: rgba(255, 255, 255, 0.10); --acento: #2DD4A7; --acento-texto: #06231B;
+      --codigo: #242426;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fundo); color: var(--texto);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Ubuntu, Cantarell, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 56px 16px 72px; }
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  header img { width: 64px; height: 64px; }
+  h1 { font-size: 2rem; margin: 0; letter-spacing: 0.2px; }
+  .sub { color: var(--mudo); margin: 0 0 32px; }
+  .instalar { display: inline-block; background: var(--acento); color: var(--acento-texto);
+              text-decoration: none; font-weight: 700; padding: 14px 28px; border-radius: 12px; }
+  .instalar:hover { filter: brightness(1.06); }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px;
+            padding: 20px 24px; margin-top: 28px; }
+  h2 { font-size: 1.1rem; margin: 0 0 10px; }
+  ol, ul { padding-left: 1.3em; margin: 0; }
+  li { margin: 6px 0; }
+  code, pre { font-family: ui-monospace, "DejaVu Sans Mono", monospace; font-size: 0.88rem; }
+  code { background: var(--codigo); padding: 1px 6px; border-radius: 6px; }
+  pre { background: var(--codigo); padding: 12px 14px; border-radius: 10px; overflow-x: auto; margin: 10px 0 0; }
+  a { color: var(--acento); }
+  .mudo { color: var(--mudo); font-size: 0.92rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="capture.svg" alt="">
+    <h1>Capture</h1>
+  </header>
+  <p class="sub">Captura de tela e anotação para Linux. Aperte Print, selecione e a imagem já fica copiada e salva.</p>
+
+  <a class="instalar" href="io.github.kassiobraga.Capture.flatpakref">Instalar o Capture</a>
+  <p class="mudo">Funciona no Linux Mint, Ubuntu, Fedora e outros com Flatpak, em sessão X11.</p>
+
+  <section class="cartao">
+    <h2>Como instalar</h2>
+    <ol>
+      <li>Clique em <strong>Instalar o Capture</strong>. O arquivo abre no Gerenciador de Aplicativos.</li>
+      <li>Confirme a instalação. Na primeira vez ele também baixa a base do GNOME, que é maior.</li>
+      <li>Saia da sessão e entre de novo para o Capture aparecer no menu.</li>
+    </ol>
+    <p class="mudo">As atualizações chegam sozinhas pelo Gerenciador de Atualizações.</p>
+  </section>
+
+  <section class="cartao">
+    <h2>Pelo terminal</h2>
+    <pre>flatpak install --user https://kassiobraga.github.io/capture/io.github.kassiobraga.Capture.flatpakref</pre>
+    <p class="mudo">No Ubuntu, instale o Flatpak antes: <code>sudo apt install flatpak</code>.</p>
+  </section>
+
+  <section class="cartao">
+    <h2>Tecla Print</h2>
+    <p>Crie um atalho de teclado personalizado com o comando abaixo e associe à tecla Print
+      (no Cinnamon: Configurações do sistema → Teclado → Atalhos → Atalhos personalizados):</p>
+    <pre>flatpak run io.github.kassiobraga.Capture --novo</pre>
+  </section>
+
+  <p class="mudo" style="margin-top:28px">
+    Código e notas de versão: <a href="https://github.com/kassiobraga/capture">github.com/kassiobraga/capture</a>
+    · <a href="Capture.flatpak">baixar o arquivo .flatpak</a>
+  </p>
+</main>
+</body>
+</html>
