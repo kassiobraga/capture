@@ -42,7 +42,7 @@ def _grava(jan, arq):
             "janela": [jan.get_width(), jan.get_height()],
             "transform": list(jan.get_surface_transform()),
             "botoes": {k: _caixa(b, jan) for k, b in botoes.items() if b.get_mapped()},
-            "estado": {"modo": jan.modo, "atraso": jan.atraso, "atraso_rotulo": jan.lb_atraso.get_label(), "tela": jan.pilha.get_visible_child_name(),
+            "estado": {"abas": jan.abas.get_n_pages(), "modo": jan.modo, "atraso": jan.atraso, "atraso_rotulo": jan.lb_atraso.get_label(), "tela": jan.pilha.get_visible_child_name(),
                        "chip": jan.chip.get_label() if jan.chip.get_mapped() else None,
                        "dock": jan.dock.get_mapped(), "avisos": jan.n_avisos,
                        "faixa_avisos": _caixa(jan.toasts, jan), "faixa_alvo": jan.toasts.get_can_target()},

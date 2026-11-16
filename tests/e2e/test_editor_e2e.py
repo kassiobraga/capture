@@ -271,6 +271,34 @@ class Editor(x.CasoE2E):
         self.assertEqual(r.returncode, 0, r.stderr)
         x.espera(lambda: app.geometria()["editor"]["imagem"] == [300, 200], 8, 0.3, "imagem relativa")
 
+    # ---- versao 1.1: abas, pixelar, girar e formatos
+    def test_cada_imagem_abre_numa_aba_e_ctrl_w_fecha(self):
+        app, g = self.abre()
+        self.assertEqual(g["estado"]["abas"], 1)
+        outra = os.path.join(self.pasta, "outra.png")
+        png_sintetico(outra, 300, 200)
+        self.assertEqual(app.comando("--abrir", outra).returncode, 0)
+        x.espera(lambda: app.geometria()["estado"]["abas"] == 2, 8, 0.3, "segunda aba")
+        self.assertEqual(app.geometria()["editor"]["imagem"], [300, 200])
+        with self.entrada() as ent:
+            ent.tecla("w", "Control_L")
+            x.espera(lambda: app.geometria()["estado"]["abas"] == 1, 6, 0.3, "aba fechada")
+            self.assertEqual(app.geometria()["editor"]["imagem"], [600, 400])  # volta para a anterior
+            ent.tecla("w", "Control_L")
+            x.espera(lambda: app.geometria(com_imagem=False)["estado"]["tela"] == "vazio", 6, 0.3, "tela inicial")
+
+    def test_pixelar_com_o_mouse_apagar_e_desfazer(self):
+        app, g = self.abre()
+        with self.entrada() as ent:
+            ent.tecla("b")
+            self.desenha(ent, g, [(50, 50), (250, 150)])
+            x.espera(lambda: app.geometria()["editor"]["tipos"] == ["pixelar"], 6, 0.3, "area pixelada")
+            ent.tecla("e")  # a borracha apaga a area pixelada inteira
+            ent.clicar(*self.tela(g, 150, 100))
+            x.espera(lambda: app.geometria()["editor"]["itens"] == 0, 6, 0.3, "pixelado apagado")
+            ent.tecla("z", "Control_L")
+            x.espera(lambda: app.geometria()["editor"]["itens"] == 1, 6, 0.3, "pixelado de volta")
+
 
 if __name__ == "__main__":
     unittest.main()

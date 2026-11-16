@@ -68,7 +68,72 @@ def _caminho(cr, it):
     return True
 
 
+def bloco_pixel(w, h):
+    """Tamanho do bloco da pixelizacao: grande o bastante para tornar texto ilegivel."""
+    return max(12, round(max(w, h) / 16))
+
+
+def pixelar(img, x, y, w, h, bloco=None):
+    """Recorte (x, y, w, h) da imagem em blocos, como uma superficie w x h."""
+    b = bloco or bloco_pixel(w, h)
+    pw, ph = max(1, math.ceil(w / b)), max(1, math.ceil(h / b))
+    peq = cairo.ImageSurface(cairo.FORMAT_ARGB32, pw, ph)
+    cr = cairo.Context(peq)
+    cr.scale(pw / w, ph / h)
+    cr.set_source_surface(img, -x, -y)
+    cr.get_source().set_filter(cairo.FILTER_GOOD)  # media da area de cada bloco
+    cr.paint()
+    out = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    cr = cairo.Context(out)
+    cr.scale(w / pw, h / ph)
+    cr.set_source_surface(peq, 0, 0)
+    cr.get_source().set_filter(cairo.FILTER_NEAREST)
+    cr.paint()
+    return out
+
+
+def girar(img, sentido):
+    """Imagem girada 90 graus: sentido 1 = horario, -1 = anti-horario."""
+    w, h = img.get_width(), img.get_height()
+    out = cairo.ImageSurface(cairo.FORMAT_ARGB32, h, w)
+    cr = cairo.Context(out)
+    if sentido > 0:
+        cr.translate(h, 0)
+        cr.rotate(math.pi / 2)
+    else:
+        cr.translate(0, w)
+        cr.rotate(-math.pi / 2)
+    cr.set_source_surface(img, 0, 0)
+    cr.paint()
+    return out
+
+
+def redimensionar(img, w, h):
+    """Imagem em novo tamanho w x h (px), com filtro de boa qualidade."""
+    out = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)
+    cr = cairo.Context(out)
+    cr.scale(w / img.get_width(), h / img.get_height())
+    cr.set_source_surface(img, 0, 0)
+    cr.get_source().set_filter(cairo.FILTER_BEST)
+    cr.get_source().set_extend(cairo.EXTEND_PAD)  # bordas sem halo transparente
+    cr.paint()
+    return out
+
+
+def proporcional(w0, h0, w=None, h=None):
+    """Completa (w, h) mantendo a proporcao de w0 x h0; minimo de 1 px."""
+    if w is not None:
+        return max(1, round(w)), max(1, round(w * h0 / w0))
+    return max(1, round(h * w0 / h0)), max(1, round(h))
+
+
 def desenha_item(cr, it):
+    if it["t"] == "pixelar":
+        x, y = it["pos"]
+        cr.set_source_surface(it["patch"], x, y)
+        cr.rectangle(x, y, it["patch"].get_width(), it["patch"].get_height())
+        cr.fill()
+        return
     _prepara(cr, it)
     if it["t"] == "texto":
         lay = _layout_texto(cr, it)
@@ -89,6 +154,9 @@ def item_vazio(it):
 def acerta_item(it, p, tol=6):
     """O ponto p (coordenadas da imagem) cai sobre o desenho do item, com folga `tol`?"""
     cr = cairo.Context(cairo.ImageSurface(cairo.FORMAT_ARGB32, 1, 1))
+    if it["t"] == "pixelar":
+        x0, y0, x1, y1 = caixa_item(it)
+        return x0 - tol <= p[0] <= x1 + tol and y0 - tol <= p[1] <= y1 + tol
     if it["t"] == "texto":
         lay = _layout_texto(cr, it)
         ink = lay.get_pixel_extents()[0]
@@ -124,6 +192,9 @@ def para_imagem(x, y, zoom, ox, oy):
 
 
 def caixa_item(it):
+    if it["t"] == "pixelar":
+        x, y = it["pos"]
+        return x, y, x + it["patch"].get_width(), y + it["patch"].get_height()
     if "pts" in it:
         xs = [p[0] for p in it["pts"]]
         ys = [p[1] for p in it["pts"]]
@@ -145,22 +216,26 @@ class Modelo:
         self.base = None
         self.itens, self.desf, self.refz = [], [], []
         self._apagou = False
+        self.alterado = False  # ha mudancas desde a ultima vez que foi salvo
 
     def redesenha(self):
         pass
 
     def definir_imagem(self, img):
         self.base, self.itens, self.desf, self.refz = img, [], [], []
+        self.alterado = False
         self.redesenha()
 
     def _guarda(self):
         self.desf.append((self.base, list(self.itens)))
         self.refz = []
+        self.alterado = True
 
     def desfazer(self):
         if self.desf:
             self.refz.append((self.base, list(self.itens)))
             self.base, self.itens = self.desf.pop()
+            self.alterado = True
             self.redesenha()
             self.mudou()
 
@@ -168,6 +243,7 @@ class Modelo:
         if self.refz:
             self.desf.append((self.base, list(self.itens)))
             self.base, self.itens = self.refz.pop()
+            self.alterado = True
             self.redesenha()
             self.mudou()
 
@@ -204,6 +280,42 @@ class Modelo:
         self.base, self.itens = nova, []
         return True
 
+    def pixela(self, x0, y0, x1, y1):
+        """Pixeliza a area (imagem e marcacoes por baixo), como uma marcacao apagavel.
+
+        False, sem alterar nada, se a area dentro da imagem tiver 4 px ou menos em algum lado.
+        """
+        base = self.base
+        caixa = interseccao(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0),
+                            base.get_width(), base.get_height())
+        if caixa is None or caixa[2] <= 4 or caixa[3] <= 4:
+            return False
+        x, y, w, h = caixa
+        self._guarda()
+        self.itens.append({"t": "pixelar", "pos": (x, y), "patch": pixelar(self.exportar(), x, y, w, h)})
+        self.redesenha()
+        return True
+
+    def gira(self, sentido):
+        """Gira 90 graus (1 = horario, -1 = anti-horario), com as marcacoes aplicadas."""
+        nova = girar(self.exportar(), sentido)
+        self._guarda()
+        self.base, self.itens = nova, []
+        self.redesenha()
+        self.mudou()
+
+    def redimensiona(self, w, h):
+        """Muda o tamanho em px, com as marcacoes aplicadas. False se nada muda ou o tamanho e invalido."""
+        w, h = int(w), int(h)
+        if w < 1 or h < 1 or (w, h) == (self.base.get_width(), self.base.get_height()):
+            return False
+        nova = redimensionar(self.exportar(), w, h)
+        self._guarda()
+        self.base, self.itens = nova, []
+        self.redesenha()
+        self.mudou()
+        return True
+
     def apaga_arraste(self, p):
         """Um passo da borracha dentro de um arraste: so o primeiro acerto cria passo de desfazer."""
         achou = self.apaga_em(p, guarda=not self._apagou)
@@ -227,13 +339,22 @@ class Modelo:
         return False
 
 
+def cores_padrao():
+    return {"caneta": CORES[1], "marca": CORES[2], "forma": CORES[0], "texto": CORES[1]}
+
+
+def espessuras_padrao():
+    return {"caneta": 4, "marca": 18, "forma": 4, "texto": 6}
+
+
 class Editor(Modelo, Gtk.DrawingArea):
-    def __init__(self, mudou):
+    def __init__(self, mudou, cores=None, esp=None):
+        """`cores` e `esp` podem ser compartilhados entre editores (uma aba por captura)."""
         super().__init__(hexpand=True, vexpand=True)
         self._inicia_modelo(mudou)
         self.ferr = "caneta"
-        self.cores = {"caneta": CORES[1], "marca": CORES[2], "forma": CORES[0], "texto": CORES[1]}
-        self.esp = {"caneta": 4, "marca": 18, "forma": 4, "texto": 6}
+        self.cores = cores if cores is not None else cores_padrao()
+        self.esp = esp if esp is not None else espessuras_padrao()
         self.atual = None
         self._p0 = (0, 0)
         self.zoom, self.ox, self.oy = 1, 0, 0
@@ -283,13 +404,14 @@ class Editor(Modelo, Gtk.DrawingArea):
         for it in self.itens:
             desenha_item(cr, it)
         if self.atual:
-            if self.atual["t"] == "cortar":
+            if self.atual["t"] in ("area_cortar", "area_pixelar"):
                 (x0, y0), (x1, y1) = self.atual["a"], self.atual["b"]
-                cr.set_source_rgba(0, 0, 0, 0.5)
-                cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
-                cr.rectangle(0, 0, iw, ih)
-                cr.rectangle(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
-                cr.fill()
+                if self.atual["t"] == "area_cortar":  # escurece o que vai sair
+                    cr.set_source_rgba(0, 0, 0, 0.5)
+                    cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+                    cr.rectangle(0, 0, iw, ih)
+                    cr.rectangle(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
+                    cr.fill()
                 cr.rectangle(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))
                 cr.set_source_rgb(1, 1, 1)
                 cr.set_line_width(2 / self.zoom)
@@ -312,8 +434,8 @@ class Editor(Modelo, Gtk.DrawingArea):
             self.atual = {"t": f, "cor": self.cor(), "esp": self.esp[f], "pts": [p]}
         elif f.startswith("f_"):
             self.atual = {"t": f, "cor": self.cor(), "esp": self.esp["forma"], "a": p, "b": p}
-        elif f == "cortar":
-            self.atual = {"t": "cortar", "a": p, "b": p}
+        elif f in ("cortar", "pixelar"):
+            self.atual = {"t": "area_" + f, "a": p, "b": p}
         elif f == "borracha":
             self._apagou = False
             self._apaga(p)
@@ -338,9 +460,12 @@ class Editor(Modelo, Gtk.DrawingArea):
         it, self.atual = self.atual, None
         if not it:
             return
-        if it["t"] == "cortar":
+        if it["t"] == "area_cortar":
             (x0, y0), (x1, y1) = it["a"], it["b"]
             self.corta(x0, y0, x1, y1)
+        elif it["t"] == "area_pixelar":
+            (x0, y0), (x1, y1) = it["a"], it["b"]
+            self.pixela(x0, y0, x1, y1)
         else:
             self.adiciona(it)
         self.queue_draw()

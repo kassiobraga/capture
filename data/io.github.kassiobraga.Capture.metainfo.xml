@@ -16,6 +16,9 @@
       <li>Optional 3, 5 or 10 second delay</li>
       <li>Works with multiple monitors</li>
       <li>Editor with pen, highlighter, eraser, shapes, arrows, text and crop</li>
+      <li>Pixelate sensitive areas, rotate and resize</li>
+      <li>Each capture opens in a tab; join all tabs into one PDF</li>
+      <li>Save as PNG, JPEG or PDF</li>
       <li>Every capture is copied to the clipboard and saved as PNG automatically</li>
       <li>Dark and light themes</li>
     </ul>
@@ -26,6 +29,9 @@
       <li xml:lang="pt_BR">Atraso opcional de 3, 5 ou 10 segundos</li>
       <li xml:lang="pt_BR">Funciona com mais de um monitor</li>
       <li xml:lang="pt_BR">Editor com caneta, marca-texto, borracha, formas, setas, texto e corte</li>
+      <li xml:lang="pt_BR">Pixele áreas sensíveis, gire e redimensione</li>
+      <li xml:lang="pt_BR">Cada captura abre numa aba; junte todas as abas num PDF</li>
+      <li xml:lang="pt_BR">Salve em PNG, JPEG ou PDF</li>
       <li xml:lang="pt_BR">Toda captura é copiada para a área de transferência e salva em PNG automaticamente</li>
       <li xml:lang="pt_BR">Temas escuro e claro</li>
     </ul>
@@ -73,6 +79,11 @@
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
+    <release version="1.1.0" date="2026-11-16">
+      <description>
+        <p>Captures open in tabs, and all tabs can be joined into a single PDF. Save as PNG, JPEG or PDF. New pixelate tool, rotate and resize.</p>
+      </description>
+    </release>
     <release version="1.0.1" date="2026-11-16">
       <description>
         <p>First release as a Flatpak, with everything included: no extra programs to install.</p>

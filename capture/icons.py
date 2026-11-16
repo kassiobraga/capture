@@ -154,6 +154,43 @@ def ic_salvar(cr):
             (5.5, 13, 5.5, 9.5, 10.5, 9.5, 10.5, 13))
 
 
+def ic_pixelar(cr):
+    _ret(cr, 2.5, 2.5, 11, 11)
+    cr.stroke()
+    for x, y in ((4.5, 4.5), (9, 4.5), (6.75, 6.75), (4.5, 9), (9, 9)):
+        cr.rectangle(x, y, 2.5, 2.5)
+    cr.fill()
+
+
+def ic_imagem(cr):
+    _ret(cr, 2.5, 3.5, 11, 9)
+    cr.stroke()
+    _linhas(cr, (2.5, 11, 6, 7.5, 8.5, 10, 10, 8.5, 13.5, 12))
+    cr.arc(10.5, 6.2, 1, 0, 2 * math.pi)
+    cr.fill()
+
+
+def ic_girar_dir(cr):
+    cr.arc_negative(8, 8.5, 5, -math.pi / 2, -math.pi * 0.2)
+    cr.stroke()
+    _linhas(cr, (5.8, 1.4, 8, 3.5, 5.8, 5.6))
+
+
+def ic_girar_esq(cr):
+    cr.translate(16, 0)
+    cr.scale(-1, 1)
+    ic_girar_dir(cr)
+
+
+def ic_redimensionar(cr):
+    _linhas(cr, (3, 13, 13, 3), (8.5, 3, 13, 3, 13, 7.5), (3, 8.5, 3, 13, 7.5, 13))
+
+
+def ic_pdf(cr):
+    _linhas(cr, (3.5, 2.5, 9.5, 2.5, 12.5, 5.5, 12.5, 13.5, 3.5, 13.5, 3.5, 2.5), (9.5, 2.5, 9.5, 5.5, 12.5, 5.5))
+    _linhas(cr, (5.5, 8.5, 10.5, 8.5), (5.5, 11, 9, 11))
+
+
 ICONES = {k[3:]: v for k, v in globals().items() if k.startswith("ic_")}
 
 

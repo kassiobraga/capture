@@ -17,7 +17,17 @@ quiser, marca por cima antes de colar em outro lugar.
 - Funciona com mais de um monitor: a seleção aparece em todos.
 - Editor com caneta, marca-texto, borracha, formas (retângulo, elipse, linha e
   seta), texto e corte, numa barra de ferramentas flutuante sobre a imagem.
+- Pixelar (ferramenta B): esconde senhas, nomes e dados numa área, como uma
+  marcação que a borracha apaga e o desfazer volta.
+- Girar 90° e redimensionar (em pixels ou %, mantendo a proporção), no botão de
+  imagem da barra de ferramentas.
 - Desfazer e refazer.
+- Cada captura abre numa aba ("Captura 1", "Captura 2"...), fechada no × ou com
+  Ctrl+W. Se a aba tiver alterações não salvas, o Capture pergunta antes.
+  Com duas abas ou mais, o botão de documento no cabeçalho junta todas num PDF,
+  uma página por aba.
+- "Salvar como" grava em PNG, JPEG ou PDF, conforme a extensão do nome
+  (`.png`, `.jpg` ou `.pdf`).
 - Toda captura nova é copiada para a área de transferência e salva em PNG
   automaticamente, antes de você anotar. Depois de anotar, copie ou salve de novo.
 - Visual minimalista: cinzas grafite neutros, um único acento verde-água (só no botão
@@ -158,12 +168,14 @@ No editor:
 | --- | --- |
 | Ctrl+N | nova captura |
 | Ctrl+C | copiar a imagem |
-| Ctrl+S | salvar como... |
+| Ctrl+S | salvar como... (PNG, JPEG ou PDF) |
+| Ctrl+W | fechar a aba |
+| Ctrl+Tab / Ctrl+Shift+Tab | próxima / aba anterior |
 | Ctrl+Z | desfazer |
 | Ctrl+Y ou Ctrl+Shift+Z | refazer |
 | P / H / E | caneta / marca-texto / borracha |
 | R / O / L / A | retângulo / elipse / linha / seta |
-| T / X | texto / cortar |
+| T / X / B | texto / cortar / pixelar |
 
 Na seleção de área: **Esc** cancela.
 
@@ -217,10 +229,10 @@ uninstall.sh  remoção
 
 ## Roadmap
 
-- **1.0** (atual): captura (região, janela, tela inteira, área livre) e anotação,
-  em pacote Flatpak com tudo incluso.
-- **1.1**: salvar em PNG, JPEG ou PDF; edição simples (redimensionar em pixels ou
-  %, borrar/pixelar, girar); capturas em abas, com "juntar abas em PDF".
+- **1.0**: captura (região, janela, tela inteira, área livre) e anotação, em
+  pacote Flatpak com tudo incluso.
+- **1.1** (atual): salvar em PNG, JPEG ou PDF; pixelar, girar e redimensionar;
+  capturas em abas, com "juntar abas em PDF".
 - **1.2**: histórico das capturas num painel lateral, limpeza diária da lista e
   modo anônimo (não registra no histórico).
 - **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou GIF.
