@@ -12,11 +12,11 @@ workflow "Flatpak"). Para criar uma versão que qualquer pessoa baixa:
 2. Crie e envie a tag:
 
    ```sh
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.0.1
+   git push origin v1.0.1
    ```
 
-O workflow anexa `Capture.flatpak` ao release `v1.0.0`. Quem baixar dá dois
+O workflow anexa `Capture.flatpak` ao release `v1.0.1`. Quem baixar dá dois
 cliques e instala. **Limite:** um arquivo baixado assim não se atualiza
 sozinho; a pessoa baixa a versão nova e instala de novo por cima.
 
@@ -29,7 +29,7 @@ clique e atualizado junto com o resto do sistema.
 
 ### Primeira submissão (uma vez)
 
-1. Faça o merge deste trabalho na `main` e crie a tag `v1.0.0` (passo acima).
+1. Faça o merge deste trabalho na `main` e crie a tag `v1.0.1` (passo acima).
    As imagens de `docs/` precisam estar na `main`: a loja as mostra.
 2. No GitHub, faça um fork de <https://github.com/flathub/flathub>, crie um
    branch a partir de `new-pr` e acrescente na raiz o arquivo
@@ -41,8 +41,8 @@ clique e atualizado junto com o resto do sistema.
        sources:
          - type: git
            url: https://github.com/kassiobraga/capture.git
-           tag: v1.0.0
-           commit: <hash completo do commit da tag>   # git rev-parse v1.0.0^{commit}
+           tag: v1.0.1
+           commit: <hash completo do commit da tag>   # git rev-parse v1.0.1^{commit}
    ```
 
 3. Abra um pull request para o branch `new-pr` do `flathub/flathub`, com o

@@ -73,7 +73,12 @@
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
-    <release version="1.0.0" date="2026-11-16">
+    <release version="1.0.1" date="2026-11-16">
+      <description>
+        <p>First release as a Flatpak, with everything included: no extra programs to install.</p>
+      </description>
+    </release>
+    <release version="1.0.0" date="2026-11-13">
       <description>
         <p>First release: rectangle, window, full screen and free form capture, with an annotation editor.</p>
       </description>
