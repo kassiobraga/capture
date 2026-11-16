@@ -37,6 +37,8 @@ modules:
   - name: capture
     buildsystem: simple
     build-commands:
+      # a captura de tela usa a libX11 do runtime via ctypes: falha cedo se ela nao carregar
+      - python3 -c "import ctypes, ctypes.util; ctypes.CDLL(ctypes.util.find_library('X11') or 'libX11.so.6'); print('libX11 ok')"
       - install -d ${FLATPAK_DEST}/share/capture
       - cp -R capture ${FLATPAK_DEST}/share/capture/capture
       - find ${FLATPAK_DEST}/share/capture -name __pycache__ -type d -prune -exec rm -rf {} +
