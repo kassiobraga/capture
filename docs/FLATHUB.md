@@ -2,23 +2,31 @@
 
 Há dois caminhos, e eles se completam.
 
-## 1. Release no GitHub (já funciona)
+## 1. Repositório próprio (atualização automática)
 
-Cada envio ao GitHub gera `Capture.flatpak` (aba **Actions**, artefato do
-workflow "Flatpak"). Para criar uma versão que qualquer pessoa baixa:
+O Capture tem um repositório Flatpak próprio, publicado no GitHub Pages em
+<https://kassiobraga.github.io/capture/>. Quem instala pelo botão da página
+(arquivo `.flatpakref`) recebe as versões novas pelo Gerenciador de
+Atualizações.
+
+Para lançar uma versão:
 
 1. Atualize `__version__` em `capture/__init__.py` e acrescente um `<release>`
    no topo de `<releases>` em `data/io.github.kassiobraga.Capture.metainfo.xml`.
-2. Crie e envie a tag:
+2. Envie para a `main` e crie a tag:
 
    ```sh
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag -a v1.0.2 -m "Capture 1.0.2"
+   git push origin v1.0.2
    ```
 
-O workflow anexa `Capture.flatpak` ao release `v1.0.1`. Quem baixar dá dois
-cliques e instala. **Limite:** um arquivo baixado assim não se atualiza
-sozinho; a pessoa baixa a versão nova e instala de novo por cima.
+O workflow "Flatpak" monta o pacote, assina com a chave do projeto (segredo
+`FLATPAK_GPG_KEY` do repositório), publica no branch `gh-pages` e anexa
+`Capture.flatpak` ao release.
+
+A chave de assinatura é a identidade das atualizações: guarde uma cópia de
+segurança. Se ela se perder ou for trocada, quem já instalou precisa reinstalar
+pelo link.
 
 ## 2. Flathub: regras sobre IA
 

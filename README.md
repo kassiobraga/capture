@@ -37,16 +37,19 @@ Limites conhecidos:
 
 ## Instalação fácil (Flatpak)
 
-O jeito recomendado: um único arquivo, com tudo dentro. Não precisa instalar
-`maim`, `xclip`, Python nem GTK à parte.
+O jeito recomendado: um clique, tudo incluso e **atualizações automáticas**. Não
+precisa instalar `maim`, `xclip`, Python nem GTK à parte.
 
-1. Baixe `Capture.flatpak` na página de
-   [Releases](https://github.com/kassiobraga/capture/releases).
-2. Dê dois cliques no arquivo (abre o Gerenciador de Aplicativos) ou, no terminal:
+Abra **<https://kassiobraga.github.io/capture/>** e clique em **Instalar o
+Capture**. O Gerenciador de Aplicativos abre e instala. Depois disso, as versões
+novas chegam pelo Gerenciador de Atualizações, como qualquer outro app. Saia da
+sessão e entre de novo para o Capture aparecer no menu na primeira vez.
 
-   ```sh
-   flatpak install --user Capture.flatpak
-   ```
+Pelo terminal, o mesmo:
+
+```sh
+flatpak install --user https://kassiobraga.github.io/capture/io.github.kassiobraga.Capture.flatpakref
+```
 
 O Linux Mint, o Fedora e o Pop!_OS já vêm com Flatpak. No Ubuntu, instale uma vez
 com `sudo apt install flatpak`.
@@ -55,9 +58,8 @@ Para a tecla Print abrir o Capture, crie um atalho de teclado personalizado com 
 comando `flatpak run io.github.kassiobraga.Capture --novo` (no Cinnamon:
 Configurações do sistema → Teclado → Atalhos → Atalhos personalizados).
 
-As capturas vão para `~/Imagens/Capturas`, como na instalação manual. Para
-publicar no Flathub (a loja, com atualização automática), veja
-[docs/FLATHUB.md](docs/FLATHUB.md).
+As capturas vão para `~/Imagens/Capturas`, como na instalação manual. Como as
+versões são publicadas, veja [docs/FLATHUB.md](docs/FLATHUB.md).
 
 ## Instalação manual (desenvolvimento)
 
