@@ -1,0 +1,53 @@
+# Pacote Flatpak do Capture. Tudo o que o app usa vai dentro dele: o runtime do
+# GNOME traz Python, GTK 4, libadwaita e PyGObject; python-xlib substitui maim,
+# xclip, xprop e xwininfo. Quem instala nao precisa de mais nada.
+#
+# Construir e instalar localmente:
+#   flatpak-builder --user --install --force-clean build-dir flatpak/io.github.kassiobraga.Capture.yml
+id: io.github.kassiobraga.Capture
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: capture
+finish-args:
+  # O Capture fotografa a tela e abre janelas de selecao por cima dela, o que so
+  # e possivel em X11 (Wayland nao deixa; o suporte vira pelo portal de captura).
+  - --socket=x11
+  - --share=ipc
+  # As capturas sao salvas em ~/Imagens/Capturas automaticamente.
+  - --filesystem=xdg-pictures
+modules:
+  - name: python3-xlib
+    buildsystem: simple
+    build-commands:
+      - pip3 install --verbose --exists-action=i --no-index --find-links="file://${PWD}"
+        --prefix=${FLATPAK_DEST} python-xlib --no-build-isolation
+    sources:
+      - type: file
+        url: https://files.pythonhosted.org/packages/fc/b8/ff33610932e0ee81ae7f1269c890f697d56ff74b9f5b2ee5d9b7fa2c5355/python_xlib-0.33-py2.py3-none-any.whl
+        sha256: c3534038d42e0df2f1392a1b30a15a4ff5fdc2b86cfa94f072bf11b10a164398
+      - type: file
+        url: https://files.pythonhosted.org/packages/d9/5a/e7c31adbe875f2abbb91bd84cf2dc52d792b5a01506781dbcf25c91daf11/six-1.16.0-py2.py3-none-any.whl
+        sha256: 8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
+
+  - name: capture
+    buildsystem: simple
+    build-commands:
+      - install -d ${FLATPAK_DEST}/share/capture
+      - cp -R capture ${FLATPAK_DEST}/share/capture/capture
+      - find ${FLATPAK_DEST}/share/capture -name __pycache__ -type d -prune -exec rm -rf {} +
+      - printf '#!/bin/sh\nPYTHONPATH="%s${PYTHONPATH:+:$PYTHONPATH}" exec python3 -m capture "$@"\n'
+        "${FLATPAK_DEST}/share/capture" > capture.sh
+      - install -Dm755 capture.sh ${FLATPAK_DEST}/bin/capture
+      - sed -e '/^# capture-install-marker/d' -e 's|@BIN@|capture|g' data/capture.desktop > ${FLATPAK_ID}.desktop
+      - install -Dm644 ${FLATPAK_ID}.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop
+      - install -Dm644 data/capture.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - install -Dm644 data/${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - build-dir
+          - .flatpak-builder
+          - repo

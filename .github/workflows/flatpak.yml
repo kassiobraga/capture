@@ -1,0 +1,35 @@
+# Gera o pacote Flatpak a cada envio. Numa tag "v*" (ex.: v1.0.0) o arquivo
+# Capture.flatpak tambem e anexado a um release do GitHub, pronto para baixar.
+name: Flatpak
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir o Flatpak
+        uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          bundle: Capture.flatpak
+          manifest-path: flatpak/io.github.kassiobraga.Capture.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+
+      - name: Publicar no release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Capture.flatpak

@@ -17,6 +17,7 @@ from . import MODOS
 from .icons import _ret, botao
 from .tema import ESCURO, rgb
 from . import teste
+from . import x11
 from .x11 import listar_janelas
 
 
@@ -319,6 +320,30 @@ class Sobreposicao(Gtk.Window):
             PangoCairo.show_layout(cr, lay)
 
 
+def foto():
+    """Foto da tela inteira: python-xlib (dentro do Flatpak) ou, sem ele, o maim."""
+    erro_xlib = None
+    if x11.tem_xlib():
+        try:
+            return x11.foto_da_tela()
+        except Exception as e:
+            erro_xlib = e
+            print("python-xlib nao capturou a tela:", e, file=sys.stderr)
+    arq = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
+    try:
+        subprocess.run(["maim", "-u", arq], check=True, timeout=10)
+        return cairo.ImageSurface.create_from_png(arq)
+    except FileNotFoundError:
+        if erro_xlib:
+            raise RuntimeError("Não foi possível capturar a tela (%s)." % erro_xlib)
+        raise RuntimeError("O programa maim não foi encontrado. Instale o pacote maim.")
+    except Exception as e:
+        raise RuntimeError("O maim não conseguiu capturar a tela (%s)." % e)
+    finally:
+        if os.path.exists(arq):
+            os.unlink(arq)
+
+
 class Sessao:
     """Uma captura: tira a foto da tela e, se preciso, abre a selecao."""
 
@@ -329,21 +354,12 @@ class Sessao:
         GLib.timeout_add(int(280 + atraso * 1000), self._fotografa)
 
     def _fotografa(self):
-        arq = tempfile.NamedTemporaryFile(suffix=".png", delete=False).name
         try:
-            subprocess.run(["maim", "-u", arq], check=True, timeout=10)
-            self.img = cairo.ImageSurface.create_from_png(arq)
+            self.img = foto()
         except Exception as e:
             print("falha na captura:", e, file=sys.stderr)
-            if isinstance(e, FileNotFoundError):
-                msg = "O programa maim não foi encontrado. Instale o pacote maim."
-            else:
-                msg = "O maim não conseguiu capturar a tela (%s)." % e
-            self._termina(None, msg)
+            self._termina(None, str(e))
             return False
-        finally:
-            if os.path.exists(arq):
-                os.unlink(arq)
         if self.modo == "tela":
             self._termina(self.img)
             return False

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kassiobraga.Capture</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Capture</name>
+  <summary>Capture, crop and annotate your screen</summary>
+  <summary xml:lang="pt_BR">Capture, recorte e anote a tela</summary>
+  <developer id="io.github.kassiobraga">
+    <name>Kassio Braga</name>
+  </developer>
+  <description>
+    <p>Press Print, select what you want, and the image is already copied and saved. If you want, mark it up before pasting it somewhere else.</p>
+    <ul>
+      <li>Four capture modes: rectangle, window, full screen and free form</li>
+      <li>Optional 3, 5 or 10 second delay</li>
+      <li>Works with multiple monitors</li>
+      <li>Editor with pen, highlighter, eraser, shapes, arrows, text and crop</li>
+      <li>Every capture is copied to the clipboard and saved as PNG automatically</li>
+      <li>Dark and light themes</li>
+    </ul>
+    <p>Capture requires an X11 session.</p>
+    <p xml:lang="pt_BR">Aperte Print, selecione o que quer, e a imagem já fica copiada e salva. Se quiser, marque por cima antes de colar em outro lugar.</p>
+    <ul xml:lang="pt_BR">
+      <li xml:lang="pt_BR">Quatro modos de captura: retângulo, janela, tela cheia e forma livre</li>
+      <li xml:lang="pt_BR">Atraso opcional de 3, 5 ou 10 segundos</li>
+      <li xml:lang="pt_BR">Funciona com mais de um monitor</li>
+      <li xml:lang="pt_BR">Editor com caneta, marca-texto, borracha, formas, setas, texto e corte</li>
+      <li xml:lang="pt_BR">Toda captura é copiada para a área de transferência e salva em PNG automaticamente</li>
+      <li xml:lang="pt_BR">Temas escuro e claro</li>
+    </ul>
+    <p xml:lang="pt_BR">O Capture precisa de uma sessão X11.</p>
+  </description>
+  <launchable type="desktop-id">io.github.kassiobraga.Capture.desktop</launchable>
+  <url type="homepage">https://github.com/kassiobraga/capture</url>
+  <url type="bugtracker">https://github.com/kassiobraga/capture/issues</url>
+  <url type="vcs-browser">https://github.com/kassiobraga/capture</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/kassiobraga/capture/main/docs/captura-editor.png</image>
+      <caption>Annotating a capture</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kassiobraga/capture/main/docs/captura-inicial.png</image>
+      <caption>Main window</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/kassiobraga/capture/main/docs/captura-editor-claro.png</image>
+      <caption>Light theme</caption>
+    </screenshot>
+  </screenshots>
+  <branding>
+    <color type="primary" scheme_preference="light">#9FE8D4</color>
+    <color type="primary" scheme_preference="dark">#0E5A47</color>
+  </branding>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <categories>
+    <category>Utility</category>
+    <category>Graphics</category>
+  </categories>
+  <keywords>
+    <keyword>screenshot</keyword>
+    <keyword>capture</keyword>
+    <keyword>annotate</keyword>
+    <keyword xml:lang="pt_BR">captura</keyword>
+    <keyword xml:lang="pt_BR">print</keyword>
+  </keywords>
+  <releases>
+    <release version="1.0.0" date="2026-11-16">
+      <description>
+        <p>First release: rectangle, window, full screen and free form capture, with an annotation editor.</p>
+      </description>
+    </release>
+  </releases>
+</component>

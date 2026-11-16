@@ -19,7 +19,7 @@ from .arquivos import nome_captura, nome_livre, pasta_capturas, pasta_para_exibi
 from .editor import Editor
 from .icons import Icone, botao
 from .overlay import Sessao
-from . import teste
+from . import area, teste, x11
 from .tema import CLARO, ESCURO, tokens_css
 
 # Identidade: cinzas grafite neutros, um unico acento verde-agua e paineis solidos
@@ -492,7 +492,9 @@ class Janela(Adw.ApplicationWindow):
             dados = io.BytesIO()
             self.editor.exportar().write_to_png(dados)
             dados = dados.getvalue()
-            if shutil.which("xclip"):
+            if shutil.which("xclip") is None and x11.tem_xlib() and area.copiar(dados):
+                ok = True  # sem xclip (Flatpak): processo proprio serve a selecao
+            elif shutil.which("xclip"):
                 # xclip fica em segundo plano servindo a selecao; nao esperamos por ele
                 p = subprocess.Popen(["xclip", "-selection", "clipboard", "-t", "image/png", "-i"],
                                      stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
