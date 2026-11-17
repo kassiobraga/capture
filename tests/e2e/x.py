@@ -280,6 +280,7 @@ class Instancia:
         self.env = env
         env["CAPTURE_APP_ID"] = "io.github.kassiobraga.CaptureTeste" + uuid.uuid4().hex[:10]
         env["CAPTURE_DIR"] = self.saida
+        env["CAPTURE_ESTADO"] = os.path.join(self.tmp, "estado")
         if geom:
             env["CAPTURE_TEST_GEOM"] = self.geom_arq
         if salvar:

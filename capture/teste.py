@@ -33,7 +33,13 @@ def _grava(jan, arq):
         ed = jan.editor
         botoes = {"capturar": jan.b_capturar, "copiar": jan.b_copiar, "salvar": jan.b_salvar,
                   "atraso": jan.mb_atraso, "formas": jan.mb_formas, "cor": jan.mb_cor,
-                  "desfazer": jan.b_desf, "refazer": jan.b_refz}
+                  "desfazer": jan.b_desf, "refazer": jan.b_refz,
+                  "historico": jan.b_historico, "anonimo": jan.b_anonimo,
+                  "hist_retencao": jan.mb_retencao, "hist_limpar": jan.b_limpar_hist}
+        if jan.divisao.get_show_sidebar():
+            for idx, info in enumerate(jan.itens_hist[:5]):
+                for ch in ("abrir", "copiar", "pasta", "remover"):
+                    botoes["hist_%s_%d" % (ch, idx)] = info[ch]
         botoes.update({"modo_" + k: b for k, b in jan.b_modo.items()})
         botoes.update({"cartao_" + k: b for k, b in jan.cartoes.items()})
         botoes.update(jan.ferrs)
@@ -45,7 +51,11 @@ def _grava(jan, arq):
             "estado": {"abas": jan.abas.get_n_pages(), "modo": jan.modo, "atraso": jan.atraso, "atraso_rotulo": jan.lb_atraso.get_label(), "tela": jan.pilha.get_visible_child_name(),
                        "chip": jan.chip.get_label() if jan.chip.get_mapped() else None,
                        "dock": jan.dock.get_mapped(), "avisos": jan.n_avisos,
-                       "faixa_avisos": _caixa(jan.toasts, jan), "faixa_alvo": jan.toasts.get_can_target()},
+                       "faixa_avisos": _caixa(jan.toasts, jan), "faixa_alvo": jan.toasts.get_can_target(),
+                       "historico_aberto": jan.divisao.get_show_sidebar(),
+                       "historico_itens": len(jan.itens_hist),
+                       "anonimo": jan.hist.anonimo,
+                       "retencao": jan.hist.retencao},
             "editor": {"caixa": _caixa(ed, jan), "zoom": ed.zoom, "ox": ed.ox, "oy": ed.oy,
                        "imagem": [ed.base.get_width(), ed.base.get_height()] if ed.base else None,
                        "itens": len(ed.itens), "tipos": [i["t"] for i in ed.itens]},

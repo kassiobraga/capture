@@ -19,6 +19,7 @@ from . import APP_ID, ATRASOS, CORES, ICONE, MODOS, NOME, PRGNAME
 from .arquivos import nome_captura, nome_livre, pasta_capturas, pasta_para_exibir
 from . import exportar
 from .editor import Editor, cores_padrao, espessuras_padrao, proporcional
+from .historico import RETENCOES, Registro, rotulo_data
 from .icons import Icone, botao
 from .overlay import Sessao
 from . import area, teste, x11
@@ -69,6 +70,7 @@ button.capturar:hover { background: shade(@cap_accent, 1.08); }
 headerbar button.discreto { min-width: 34px; min-height: 32px; padding: 0; border-radius: 10px; background: none;
                             box-shadow: none; color: @cap_text; }
 headerbar button.discreto:hover { background: alpha(@cap_text, 0.08); }
+headerbar button.discreto:checked { background: alpha(@cap_accent, 0.18); color: @cap_accent; }
 headerbar button.discreto:disabled { opacity: 0.35; }
 
 headerbar windowcontrols > button, headerbar windowcontrols > button.close { background: none; background-image: none; color: @cap_text; box-shadow: none; }
@@ -82,6 +84,26 @@ headerbar windowcontrols > button:hover { background: alpha(@cap_text, 0.08); }
 tabbar .box { background: @cap_surface; border-bottom: 1px solid @cap_edge; box-shadow: none; }
 tabbar tab:selected { background: alpha(@cap_accent, 0.14); color: @cap_text; }
 .menu-imagem button { padding: 6px 10px; }
+
+.painel-hist { background: @cap_surface; border-right: 1px solid @cap_edge; }
+.topo-hist { padding: 10px 10px 8px; border-bottom: 1px solid @cap_edge; }
+.titulo-hist { font-weight: 700; font-size: 0.95em; }
+.retencao > button { padding: 4px 8px; min-height: 28px; border-radius: 8px;
+                     background: alpha(@cap_text, 0.05); border: 1px solid @cap_edge;
+                     box-shadow: none; color: @cap_text; }
+.retencao > button:hover { background: alpha(@cap_text, 0.10); }
+.retencao label { font-size: 0.85em; font-weight: 500; }
+.aviso-anon { background: alpha(@cap_accent, 0.12); border: 1px solid alpha(@cap_accent, 0.28);
+              border-radius: 8px; padding: 6px 8px; font-size: 0.82em; }
+.item-hist { background: @cap_raised; border: 1px solid @cap_edge; border-radius: 10px; padding: 7px; }
+.item-hist button.abrir-item { padding: 4px; border-radius: 8px; background: none; border: none;
+                               box-shadow: none; color: @cap_text; }
+.item-hist button.abrir-item:hover { background: alpha(@cap_text, 0.06); }
+.mini-quadro { background: @cap_canvas; border: 1px solid @cap_edge; border-radius: 6px;
+               min-width: 72px; min-height: 48px; }
+.data-hist { font-weight: 600; font-size: 0.88em; }
+.sub-hist { font-size: 0.80em; }
+.acoes-hist button { min-width: 28px; min-height: 28px; padding: 0; border-radius: 8px; }
 """
 
 
@@ -155,12 +177,28 @@ class Janela(Adw.ApplicationWindow):
         # editor sem imagem, fora da tela, usado enquanto nao ha nenhuma aba
         self._sem_aba = Editor(self._mudou, self.cores, self.esp)
         self.editor = self._sem_aba
+        self.hist = Registro()
+        self.itens_hist = []
+        self._sinc_hist = False
+        self._sinc_anon = False
 
-        # ---- cabecalho: titulo | modos + atraso | copiar, salvar, capturar
+        # ---- cabecalho: historico, titulo, anonimo | modos + atraso | copiar, salvar, capturar
         cab = Adw.HeaderBar()
+        self.b_historico = botao("historico", "Histórico de capturas (Ctrl+H)", alternar=True)
+        self.b_historico.add_css_class("discreto")
+        self.b_historico.connect("toggled", self._alternar_historico)
+        cab.pack_start(self.b_historico)
         t = Gtk.Label(label=NOME)
         t.add_css_class("titulo-app")
         cab.pack_start(t)
+        self.b_anonimo = botao("anonimo", "Modo anônimo: não salva em disco nem registra no histórico",
+                               alternar=True)
+        self.b_anonimo.add_css_class("discreto")
+        self._sinc_anon = True
+        self.b_anonimo.set_active(self.hist.anonimo)
+        self._sinc_anon = False
+        self.b_anonimo.connect("toggled", self._anonimo_trocado)
+        cab.pack_start(self.b_anonimo)
 
         centro = Gtk.Box(spacing=10)
         modos = Gtk.Box(spacing=2)
@@ -358,12 +396,19 @@ class Janela(Adw.ApplicationWindow):
         self.n_avisos = 0
         ov.add_overlay(self.toasts)
 
+        self.divisao = Adw.OverlaySplitView(show_sidebar=False, min_sidebar_width=248, max_sidebar_width=276)
+        self.divisao.set_sidebar(self._monta_painel_historico())
+        self.divisao.set_content(ov)
+        self.divisao.connect("notify::show-sidebar", self._painel_mudou)
+        self.connect("notify::is-active", self._foco_janela)
+
         tv = Adw.ToolbarView()
         tv.add_top_bar(cab)
         tv.add_top_bar(self.barra_abas)
-        tv.set_content(ov)
+        tv.set_content(self.divisao)
         self.set_content(tv)
         self.ferrs["caneta"].set_active(True)
+        self._atualiza_historico()
 
         tec = Gtk.EventControllerKey()
         tec.connect("key-pressed", self._tecla)
@@ -421,6 +466,8 @@ class Janela(Adw.ApplicationWindow):
         t = Gdk.keyval_to_lower(tecla)
         if ctrl and t == Gdk.KEY_n:
             self.nova_captura()
+        elif ctrl and t == Gdk.KEY_h:
+            self.b_historico.set_active(not self.b_historico.get_active())
         elif ctrl and t == Gdk.KEY_c and self.editor.base:
             self.copiar()
         elif ctrl and t == Gdk.KEY_s and self.editor.base:
@@ -505,7 +552,8 @@ class Janela(Adw.ApplicationWindow):
             g = mon.get_geometry()
             lim_w, lim_h = min(lim_w, g.width - 80), min(lim_h, g.height - 100)
         # altura: cabecalho, barra de abas e o dock flutuante embaixo da imagem
-        w, h = int(min(max(iw + 60, 720), lim_w)), int(min(max(ih + 240, 480), lim_h))
+        extra_w = 260 if self.divisao.get_show_sidebar() else 0
+        w, h = int(min(max(iw + 60 + extra_w, 720), lim_w)), int(min(max(ih + 240, 480), lim_h))
         if so_crescer:
             aw, ah = self.get_width(), self.get_height()
             if w <= aw and h <= ah:
@@ -545,13 +593,261 @@ class Janela(Adw.ApplicationWindow):
         if novo:
             if self.copiar(quieto=True):
                 partes.append("Copiado para a área de transferência")
-            self.salvo_em = self._salva_auto()
-            if self.salvo_em:
+            if self.hist.anonimo:
                 ed.alterado = False
-                partes.append("Salvo em " + pasta_para_exibir(self.salvo_em))
+                partes.append("Modo anônimo (não salvo)")
+            else:
+                self.salvo_em = self._salva_auto()
+                if self.salvo_em:
+                    ed.alterado = False
+                    self.hist.adicionar(self.salvo_em, img)
+                    self._atualiza_historico()
+                    partes.append("Salvo em " + pasta_para_exibir(self.salvo_em))
         self._status(*partes)
         self.present()
         teste.grava_geometria(self)
+
+    # ---- historico e modo anonimo
+    def _monta_painel_historico(self):
+        painel = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        painel.add_css_class("painel-hist")
+
+        topo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        topo.add_css_class("topo-hist")
+
+        cab = Gtk.Box(spacing=6)
+        tit = Gtk.Label(label="Histórico", xalign=0, hexpand=True)
+        tit.add_css_class("titulo-hist")
+        cab.append(tit)
+        self.b_limpar_hist = botao("lixeira", "Limpar a lista (mantém os arquivos salvos)")
+        self.b_limpar_hist.connect("clicked", lambda *_: self._limpar_historico())
+        cab.append(self.b_limpar_hist)
+        topo.append(cab)
+
+        self.lb_retencao = Gtk.Label(label=dict(RETENCOES)[self.hist.retencao], xalign=0, hexpand=True)
+        cx_ret = Gtk.Box(spacing=6)
+        cx_ret.append(Icone("relogio", 14))
+        cx_ret.append(self.lb_retencao)
+        self.mb_retencao = Gtk.MenuButton(
+            tooltip_text="Quando limpar esta lista (os arquivos na pasta Capturas sempre ficam)")
+        self.mb_retencao.add_css_class("retencao")
+        self.mb_retencao.set_child(cx_ret)
+        opcoes = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                         margin_top=4, margin_bottom=4, margin_start=4, margin_end=4)
+        self.b_retencao = {}
+        gr = None
+        for cod, nome in RETENCOES:
+            b = Gtk.ToggleButton(label=nome)
+            b.add_css_class("flat")
+            if gr:
+                b.set_group(gr)
+            gr = gr or b
+            b.connect("clicked", self._retencao_escolhida, cod)
+            self.b_retencao[cod] = b
+            opcoes.append(b)
+        self.b_retencao[self.hist.retencao].set_active(True)
+        self.mb_retencao.set_popover(Gtk.Popover(child=opcoes))
+        topo.append(self.mb_retencao)
+
+        self.aviso_anon = Gtk.Box(spacing=6)
+        self.aviso_anon.add_css_class("aviso-anon")
+        self.aviso_anon.append(Icone("anonimo", 15))
+        lb_an = Gtk.Label(label="Modo anônimo ativo:\nnão salva nem registra.", xalign=0, wrap=True)
+        self.aviso_anon.append(lb_an)
+        self.aviso_anon.set_visible(self.hist.anonimo)
+        topo.append(self.aviso_anon)
+        painel.append(topo)
+
+        self.pilha_hist = Gtk.Stack(vexpand=True)
+        vz = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                     halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER,
+                     margin_start=16, margin_end=16)
+        lb_vz = Gtk.Label(label="Nenhuma captura no histórico.\nAs próximas capturas aparecerão aqui.",
+                          justify=Gtk.Justification.CENTER, wrap=True)
+        lb_vz.add_css_class("mudo")
+        vz.append(lb_vz)
+        self.pilha_hist.add_named(vz, "vazio")
+
+        rolagem = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True)
+        self.lista_hist = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                                  margin_top=10, margin_bottom=12, margin_start=10, margin_end=10)
+        rolagem.set_child(self.lista_hist)
+        self.pilha_hist.add_named(rolagem, "lista")
+        painel.append(self.pilha_hist)
+        return painel
+
+    def _alternar_historico(self, b):
+        if self._sinc_hist:
+            return
+        ativo = b.get_active()
+        if ativo:
+            self._atualiza_historico()
+        self._sinc_hist = True
+        self.divisao.set_show_sidebar(ativo)
+        self._sinc_hist = False
+
+    def _painel_mudou(self, *_):
+        if self._sinc_hist:
+            return
+        aberto = self.divisao.get_show_sidebar()
+        if aberto:
+            self._atualiza_historico()
+        self._sinc_hist = True
+        self.b_historico.set_active(aberto)
+        self._sinc_hist = False
+
+    def _foco_janela(self, *_):
+        if self.is_active() and self.divisao.get_show_sidebar():
+            atuais = [w["item"]["id"] for w in self.itens_hist]
+            novos = [it["id"] for it in self.hist.listar()]
+            if atuais != novos:
+                self._atualiza_historico()
+
+    def _anonimo_trocado(self, b):
+        if self._sinc_anon:
+            return
+        ativo = b.get_active()
+        self.hist.definir_anonimo(ativo)
+        self.aviso_anon.set_visible(ativo)
+        self._status("Modo anônimo ativado: capturas não serão salvas nem entrarão no histórico"
+                     if ativo else "Modo anônimo desativado")
+
+    def _retencao_escolhida(self, b, cod):
+        self.hist.definir_retencao(cod)
+        self.lb_retencao.set_label(dict(RETENCOES)[cod])
+        b.set_active(True)
+        self.mb_retencao.popdown()
+        self._atualiza_historico()
+
+    def _limpar_historico(self):
+        self.hist.limpar()
+        self._atualiza_historico()
+        self._status("Lista do histórico limpa  ·  Os arquivos salvos foram mantidos")
+
+    def _atualiza_historico(self):
+        filho = self.lista_hist.get_first_child()
+        while filho is not None:
+            prox = filho.get_next_sibling()
+            self.lista_hist.remove(filho)
+            filho = prox
+        self.itens_hist = []
+        itens = self.hist.listar()
+        self.b_limpar_hist.set_sensitive(bool(itens))
+        if not itens:
+            self.pilha_hist.set_visible_child_name("vazio")
+            return
+        for it in itens:
+            info = self._cria_item_historico(it)
+            self.itens_hist.append(info)
+            self.lista_hist.append(info["caixa"])
+        self.pilha_hist.set_visible_child_name("lista")
+
+    def _cria_item_historico(self, it):
+        cartao = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        cartao.add_css_class("item-hist")
+        cartao.set_tooltip_text(pasta_para_exibir(it["caminho"]))
+
+        b_principal = Gtk.Button()
+        b_principal.add_css_class("abrir-item")
+        b_principal.set_tooltip_text("Abrir numa aba nova")
+        b_principal.connect("clicked", lambda _b, item=it: self._hist_abrir(item))
+
+        linha = Gtk.Box(spacing=8)
+        quadro = Gtk.Box(valign=Gtk.Align.CENTER)
+        quadro.add_css_class("mini-quadro")
+        quadro.set_overflow(Gtk.Overflow.HIDDEN)
+        quadro.set_size_request(72, 48)
+        mini = self.hist.caminho_miniatura(it)
+        if mini:
+            try:
+                pic = Gtk.Picture.new_for_paintable(Gdk.Texture.new_from_filename(mini))
+                pic.set_content_fit(Gtk.ContentFit.COVER)
+                pic.set_can_shrink(True)
+                pic.set_hexpand(True)
+                pic.set_vexpand(True)
+                quadro.append(pic)
+            except Exception:
+                quadro.append(Icone("imagem", 20))
+        else:
+            quadro.append(Icone("imagem", 20))
+        linha.append(quadro)
+
+        textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                         valign=Gtk.Align.CENTER, hexpand=True)
+        lb_data = Gtk.Label(label=rotulo_data(it.get("criado_em")), xalign=0)
+        lb_data.add_css_class("data-hist")
+        textos.append(lb_data)
+        w, h = it.get("largura", 0), it.get("altura", 0)
+        sub = "%d × %d px" % (w, h) if w and h else os.path.basename(it["caminho"])
+        lb_sub = Gtk.Label(label=sub, xalign=0)
+        lb_sub.add_css_class("mudo")
+        lb_sub.add_css_class("sub-hist")
+        textos.append(lb_sub)
+        linha.append(textos)
+        b_principal.set_child(linha)
+        cartao.append(b_principal)
+
+        acoes = Gtk.Box(spacing=2)
+        acoes.add_css_class("acoes-hist")
+        b_abrir = botao("abrir", "Abrir numa aba nova")
+        b_abrir.connect("clicked", lambda _b, item=it: self._hist_abrir(item))
+        b_copiar = botao("copiar", "Copiar imagem")
+        b_copiar.connect("clicked", lambda _b, item=it: self._hist_copiar(item))
+        b_pasta = botao("pasta", "Abrir a pasta do arquivo")
+        b_pasta.connect("clicked", lambda _b, item=it: self._hist_pasta(item))
+        esp = Gtk.Box(hexpand=True)
+        b_rem = botao("x", "Remover da lista (mantém o arquivo)")
+        b_rem.connect("clicked", lambda _b, item=it: self._hist_remover(item))
+        for wdg in (b_abrir, b_copiar, b_pasta, esp, b_rem):
+            acoes.append(wdg)
+        cartao.append(acoes)
+        return {"item": it, "caixa": cartao, "abrir": b_abrir, "copiar": b_copiar,
+                "pasta": b_pasta, "remover": b_rem}
+
+    def _confere_item_hist(self, it):
+        if os.path.isfile(it["caminho"]):
+            return True
+        self._atualiza_historico()
+        self._status("O arquivo não existe mais e saiu da lista")
+        return False
+
+    def _hist_abrir(self, it):
+        if self._confere_item_hist(it):
+            self.abrir_arquivo(it["caminho"])
+
+    def _hist_copiar(self, it):
+        if not self._confere_item_hist(it):
+            return
+        try:
+            with open(it["caminho"], "rb") as f:
+                dados = f.read()
+        except OSError:
+            self._atualiza_historico()
+            self._status("Não foi possível ler o arquivo")
+            return
+        self._copia_png_bytes(dados, quieto=False)
+
+    def _hist_pasta(self, it):
+        if not self._confere_item_hist(it):
+            return
+        arq = Gio.File.new_for_path(it["caminho"])
+        lan = Gtk.FileLauncher.new(arq)
+
+        def pronto(obj, res):
+            try:
+                obj.open_containing_folder_finish(res)
+            except Exception:
+                try:
+                    pasta = Gio.File.new_for_path(os.path.dirname(it["caminho"])).get_uri()
+                    Gio.AppInfo.launch_default_for_uri(pasta, None)
+                except Exception:
+                    self._status("Pasta: " + pasta_para_exibir(os.path.dirname(it["caminho"])))
+
+        lan.open_containing_folder(self, None, pronto)
+
+    def _hist_remover(self, it):
+        self.hist.remover(it["id"])
+        self._atualiza_historico()
 
     def _aba_trocada(self, *_):
         pag = self.abas.get_selected_page()
@@ -632,14 +928,9 @@ class Janela(Adw.ApplicationWindow):
             print("falha ao salvar:", e, file=sys.stderr)
             return None
 
-    def copiar(self, quieto=False):
-        if not self.editor.base:
-            return False
+    def _copia_png_bytes(self, dados, quieto=False):
         ok = False
         try:
-            dados = io.BytesIO()
-            self.editor.exportar().write_to_png(dados)
-            dados = dados.getvalue()
             if shutil.which("xclip") is None and x11.tem_xlib() and area.copiar(dados):
                 ok = True  # sem xclip (Flatpak): processo proprio serve a selecao
             elif shutil.which("xclip"):
@@ -659,6 +950,19 @@ class Janela(Adw.ApplicationWindow):
         if not quieto:
             self._status("Copiado para a área de transferência" if ok else "Não foi possível copiar")
         return ok
+
+    def copiar(self, quieto=False):
+        if not self.editor.base:
+            return False
+        try:
+            dados = io.BytesIO()
+            self.editor.exportar().write_to_png(dados)
+            return self._copia_png_bytes(dados.getvalue(), quieto=quieto)
+        except Exception as e:
+            print("falha ao copiar:", e, file=sys.stderr)
+            if not quieto:
+                self._status("Não foi possível copiar")
+            return False
 
     def _grava(self, arq, ed=None):
         ed = ed or self.editor
