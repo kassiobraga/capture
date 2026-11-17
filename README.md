@@ -26,6 +26,10 @@ quiser, marca por cima antes de colar em outro lugar.
   Ctrl+W. Se a aba tiver alterações não salvas, o Capture pergunta antes.
   Com duas abas ou mais, o botão de documento no cabeçalho junta todas num PDF,
   uma página por aba.
+- Histórico num painel lateral recolhível (botão no cabeçalho ou Ctrl+H), com
+  miniatura, data e hora: reabra numa aba nova, copie, abra a pasta do arquivo ou
+  remova da lista. Inclui opção de limpar a lista todo dia (mantendo os arquivos
+  salvos) e modo anônimo (não salva arquivo automático nem registra no histórico).
 - "Salvar como" grava em PNG, JPEG ou PDF, conforme a extensão do nome
   (`.png`, `.jpg` ou `.pdf`).
 - Toda captura nova é copiada para a área de transferência e salva em PNG
@@ -167,6 +171,7 @@ No editor:
 | Atalho | Ação |
 | --- | --- |
 | Ctrl+N | nova captura |
+| Ctrl+H | abrir ou fechar o histórico |
 | Ctrl+C | copiar a imagem |
 | Ctrl+S | salvar como... (PNG, JPEG ou PDF) |
 | Ctrl+W | fechar a aba |
@@ -184,8 +189,9 @@ Na seleção de área: **Esc** cancela.
 Em `Capturas`, dentro da pasta de imagens do usuário (normalmente
 `~/Imagens/Capturas`, ou `~/Pictures/Capturas` em sistema em inglês), com nomes
 como `Captura de tela 2026-11-12 153000.png`. Duas capturas no mesmo segundo
-ganham ` (2)`, ` (3)`... no nome; nada é sobrescrito. A cópia para a área de
-transferência usa `xclip` e não deixa arquivo em disco.
+ganham ` (2)`, ` (3)`... no nome; nada é sobrescrito. No modo anônimo, a captura
+vai apenas para a aba e para a área de transferência, sem gravar arquivo em disco
+nem entrar no histórico.
 
 ## Testes
 
@@ -217,7 +223,7 @@ As imagens desta página foram geradas por `docs/gerar_captura.py`.
 ## Estrutura
 
 ```
-capture/      pacote Python (app, overlay, editor, icons, x11, arquivos)
+capture/      pacote Python (app, overlay, editor, historico, icons, x11, arquivos)
 data/         ícone SVG, modelo do .desktop e metainfo (AppStream)
 flatpak/      manifesto do pacote Flatpak
 docs/         imagens do README e o script que as gera
@@ -231,10 +237,10 @@ uninstall.sh  remoção
 
 - **1.0**: captura (região, janela, tela inteira, área livre) e anotação, em
   pacote Flatpak com tudo incluso.
-- **1.1** (atual): salvar em PNG, JPEG ou PDF; pixelar, girar e redimensionar;
+- **1.1**: salvar em PNG, JPEG ou PDF; pixelar, girar e redimensionar;
   capturas em abas, com "juntar abas em PDF".
-- **1.2**: histórico das capturas num painel lateral, limpeza diária da lista e
-  modo anônimo (não registra no histórico).
+- **1.2** (atual): histórico das capturas num painel lateral, limpeza diária da
+  lista e modo anônimo.
 - **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou GIF.
 - **1.4**: captura rolável, para páginas e janelas mais compridas que a tela.
 - **Depois**: suporte a Wayland (captura pelo portal do sistema).

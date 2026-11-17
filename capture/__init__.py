@@ -1,6 +1,6 @@
 """Capture: captura de tela e anotação para Linux (X11), em GTK 4 / libadwaita."""
 
-__version__ = "1.1.3"
+__version__ = "1.2.0"
 
 APP_ID = "io.github.kassiobraga.Capture"
 ICONE = APP_ID  # nome do icone no tema
