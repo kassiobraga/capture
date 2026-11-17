@@ -42,9 +42,8 @@ class NomeDeTema(unittest.TestCase):
         for n in ("Mint-Y", "Adwaita", "", None):
             self.assertFalse(nome_de_tema_escuro(n), n)
 
-    def test_tema_do_gtk_nao_quebra(self):
-        r = Tema.rodar(self, "import gi\ngi.require_version('Gtk','4.0')\n"
-                       "from capture.app import tema_escuro_do_gtk\nprint(tema_escuro_do_gtk())")
+    def test_tema_do_portal_nao_quebra(self):
+        r = Tema.rodar(self, "from capture.app import tema_escuro_do_portal\nprint(tema_escuro_do_portal())")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn(r.stdout.strip(), ("True", "False", "None"))
 

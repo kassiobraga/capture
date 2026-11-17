@@ -111,20 +111,23 @@ def nome_de_tema_escuro(nome):
     return "dark" in (nome or "").lower()
 
 
-def tema_escuro_do_gtk():
-    """True/False conforme o tema GTK que o proprio GTK enxerga; None se nao houver como saber.
+def tema_escuro_do_portal():
+    """True/False conforme o tema GTK informado pelo portal de configuracoes; None se indisponivel.
 
-    No Flatpak o esquema do Cinnamon nao existe, mas o portal repassa o tema GTK
-    (e o color-scheme) ao GTK; sem isso o app saia claro num desktop escuro.
+    No Flatpak o esquema do Cinnamon nao existe, mas o portal repassa o gtk-theme do
+    desktop. O libadwaita troca o gtk-theme-name interno por "Adwaita-empty" ao
+    iniciar, entao o valor e lido direto do portal.
     """
     try:
-        cfg = Gtk.Settings.get_default()
-        if cfg is None:
-            return None
-        if cfg.get_property("gtk-application-prefer-dark-theme"):
-            return True
-        nome = cfg.get_property("gtk-theme-name")
-        return nome_de_tema_escuro(nome) if nome else None
+        proxy = Gio.DBusProxy.new_for_bus_sync(
+            Gio.BusType.SESSION, Gio.DBusProxyFlags.DO_NOT_AUTO_START, None,
+            "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Settings", None)
+        r = proxy.call_sync("Read", GLib.Variant("(ss)", ("org.gnome.desktop.interface", "gtk-theme")),
+                            Gio.DBusCallFlags.NONE, 2000, None).unpack()[0]
+        while isinstance(r, (tuple, list)) and r:
+            r = r[0]
+        return nome_de_tema_escuro(r) if isinstance(r, str) and r else None
     except Exception:
         return None
 
@@ -819,7 +822,7 @@ class App(Adw.Application):
         else:  # sistema
             escuro = tema_escuro()
         if escuro is None:  # sem o esquema do Cinnamon (ex.: Flatpak): usa o tema GTK do portal
-            escuro = tema_escuro_do_gtk()
+            escuro = tema_escuro_do_portal()
         if escuro is None:  # nem isso: segue o padrao do sistema
             escuro = Adw.StyleManager.get_default().get_dark()
         else:
