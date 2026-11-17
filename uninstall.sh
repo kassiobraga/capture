@@ -38,6 +38,7 @@ fi
 
 rm -rf "${DADOS:?}/$APP_ID"
 rm -rf "${XDG_CACHE_HOME:-$HOME/.cache}/${APP_ID:?}"
+rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/${APP_ID:?}"
 rm -f "$ICONES/scalable/apps/$APP_ID.svg"
 for t in 48 64 128 256; do
     rm -f "$ICONES/${t}x${t}/apps/$APP_ID.png"
