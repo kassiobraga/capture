@@ -33,6 +33,22 @@ class Tema(unittest.TestCase):
 
 
 
+class NomeDeTema(unittest.TestCase):
+    def test_variantes_escuras(self):
+        sys.path.insert(0, RAIZ)
+        from capture.app import nome_de_tema_escuro
+        for n in ("Mint-Y-Dark-Blue", "Adwaita-dark", "Yaru-DARK", "Breeze-Dark"):
+            self.assertTrue(nome_de_tema_escuro(n), n)
+        for n in ("Mint-Y", "Adwaita", "", None):
+            self.assertFalse(nome_de_tema_escuro(n), n)
+
+    def test_tema_do_gtk_nao_quebra(self):
+        r = Tema.rodar(self, "import gi\ngi.require_version('Gtk','4.0')\n"
+                       "from capture.app import tema_escuro_do_gtk\nprint(tema_escuro_do_gtk())")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn(r.stdout.strip(), ("True", "False", "None"))
+
+
 class Caminho(unittest.TestCase):
     def test_decodifica_opcao_filename(self):
         sys.path.insert(0, RAIZ)

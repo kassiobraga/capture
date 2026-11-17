@@ -106,6 +106,29 @@ def tema_escuro(esquema="org.cinnamon.desktop.interface", chave="gtk-theme"):
         return None
 
 
+def nome_de_tema_escuro(nome):
+    """True se o nome de um tema GTK indica variante escura (Mint-Y-Dark-Blue, Adwaita-dark...)."""
+    return "dark" in (nome or "").lower()
+
+
+def tema_escuro_do_gtk():
+    """True/False conforme o tema GTK que o proprio GTK enxerga; None se nao houver como saber.
+
+    No Flatpak o esquema do Cinnamon nao existe, mas o portal repassa o tema GTK
+    (e o color-scheme) ao GTK; sem isso o app saia claro num desktop escuro.
+    """
+    try:
+        cfg = Gtk.Settings.get_default()
+        if cfg is None:
+            return None
+        if cfg.get_property("gtk-application-prefer-dark-theme"):
+            return True
+        nome = cfg.get_property("gtk-theme-name")
+        return nome_de_tema_escuro(nome) if nome else None
+    except Exception:
+        return None
+
+
 def decodifica_caminho(v):
     """Valor de uma opcao FILENAME (bytestring, lista de bytes ou str) -> str."""
     if isinstance(v, (list, tuple)):
@@ -795,7 +818,9 @@ class App(Adw.Application):
             escuro = False
         else:  # sistema
             escuro = tema_escuro()
-        if escuro is None:  # sem o esquema do Cinnamon: segue o padrao do sistema
+        if escuro is None:  # sem o esquema do Cinnamon (ex.: Flatpak): usa o tema GTK do portal
+            escuro = tema_escuro_do_gtk()
+        if escuro is None:  # nem isso: segue o padrao do sistema
             escuro = Adw.StyleManager.get_default().get_dark()
         else:
             Adw.StyleManager.get_default().set_color_scheme(
