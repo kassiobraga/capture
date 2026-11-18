@@ -85,9 +85,12 @@ def caixa_selecao(modo, ini, fim, caminho, gw, gh):
     return max(0, x0), max(0, y0), min(gw, x1), min(gh, y1)
 
 
+MODOS_GRAVAR = [("ret", "Retângulo"), ("janela", "Janela"), ("tela", "Tela cheia")]
 DICAS = {"ret": "Arraste para selecionar  ·  Esc cancela",
          "janela": "Clique em uma janela  ·  Esc cancela",
          "livre": "Desenhe em volta da área  ·  Esc cancela"}
+DICAS_GRAVAR = {"ret": "Arraste a região para gravar  ·  Esc cancela",
+                "janela": "Clique em uma janela para gravar  ·  Esc cancela"}
 # a sobreposicao e sempre escura (a tela e escurecida): usa a paleta escura do tema
 ACENTO = rgb(ESCURO["accent"])
 FUNDO_ESCURO = (0.0, 0.0, 0.0)   # escurecimento neutro
@@ -138,7 +141,7 @@ class Sobreposicao(Gtk.Window):
         self.dica.set_can_target(False)   # decorativa: o arraste ou clique que comeca embaixo dela vale
         self.bts = {}
         grupo = None
-        for cod, nome in MODOS:
+        for cod, nome in (MODOS_GRAVAR if sessao.apenas_area else MODOS):
             b = botao({"ret": "ret", "janela": "janela", "tela": "tela", "livre": "livre"}[cod], nome, alternar=True)
             if grupo:
                 b.set_group(grupo)
@@ -180,7 +183,8 @@ class Sobreposicao(Gtk.Window):
         self._trava = True
         self.bts[self.s.modo].set_active(True)
         self._trava = False
-        self.dica.set_label(DICAS.get(self.s.modo, ""))
+        dicas = DICAS_GRAVAR if self.s.apenas_area else DICAS
+        self.dica.set_label(dicas.get(self.s.modo, ""))
         self.pill.set_visible(True)
         self.dica.set_visible(True)
         self._mostra_dica()
@@ -345,13 +349,19 @@ def foto():
 
 
 class Sessao:
-    """Uma captura: tira a foto da tela e, se preciso, abre a selecao."""
+    """Uma captura ou selecao de area: tira a foto da tela e, se preciso, abre a selecao."""
 
-    def __init__(self, app, modo, atraso, pronto):
+    def __init__(self, app, modo, atraso, pronto, apenas_area=False):
+        self.apenas_area = bool(apenas_area)
+        if self.apenas_area and modo == "livre":
+            modo = "ret"
         self.app, self.modo, self.pronto = app, modo, pronto
         self.img, self.janelas, self.sobre = None, [], []
         self.encerrada = False
         GLib.timeout_add(int(280 + atraso * 1000), self._fotografa)
+
+    def _area_tela_cheia(self):
+        return (0, 0, self.img.get_width(), self.img.get_height())
 
     def _fotografa(self):
         try:
@@ -361,7 +371,7 @@ class Sessao:
             self._termina(None, str(e))
             return False
         if self.modo == "tela":
-            self._termina(self.img)
+            self._termina(self._area_tela_cheia() if self.apenas_area else self.img)
             return False
         self.janelas = listar_janelas()
         mons = Gdk.Display.get_default().get_monitors()
@@ -374,7 +384,7 @@ class Sessao:
     def definir_modo(self, modo):
         self.modo = modo
         if modo == "tela":
-            self._termina(self.img)
+            self._termina(self._area_tela_cheia() if self.apenas_area else self.img)
             return
         for o in self.sobre:
             o.sincroniza()
@@ -384,7 +394,7 @@ class Sessao:
         for o in sobre:
             o.destroy()
 
-    def _termina(self, img, erro=None):
+    def _termina(self, resultado, erro=None):
         """Encerra a sessao uma unica vez: fecha as sobreposicoes e avisa quem pediu."""
         if self.encerrada:
             return
@@ -393,12 +403,19 @@ class Sessao:
         if erro:
             self.pronto(None, erro)
         else:
-            self.pronto(img)
+            self.pronto(resultado)
 
     def cancelar(self):
         self._termina(None)
 
     def concluir(self, x, y, w, h, poligono=None):
+        if self.apenas_area:
+            caixa = interseccao(x, y, w, h, self.img.get_width(), self.img.get_height())
+            if caixa is None:
+                self._termina(None, "A seleção ficou fora da área da tela.")
+            else:
+                self._termina(caixa)
+            return
         img = recortar(self.img, x, y, w, h, poligono)
         if img is None:
             self._termina(None, "A seleção ficou fora da imagem capturada.")

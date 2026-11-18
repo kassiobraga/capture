@@ -31,7 +31,9 @@ def _grava(jan, arq):
         except Exception:
             pass
         ed = jan.editor
-        botoes = {"capturar": jan.b_capturar, "copiar": jan.b_copiar, "salvar": jan.b_salvar,
+        botoes = {"capturar": jan.b_capturar, "gravar": jan.b_gravar,
+                  "formato_gravacao": jan.mb_formato,
+                  "copiar": jan.b_copiar, "salvar": jan.b_salvar,
                   "atraso": jan.mb_atraso, "formas": jan.mb_formas, "cor": jan.mb_cor,
                   "desfazer": jan.b_desf, "refazer": jan.b_refz,
                   "historico": jan.b_historico, "anonimo": jan.b_anonimo,
@@ -55,7 +57,9 @@ def _grava(jan, arq):
                        "historico_aberto": jan.divisao.get_show_sidebar(),
                        "historico_itens": len(jan.itens_hist),
                        "anonimo": jan.hist.anonimo,
-                       "retencao": jan.hist.retencao},
+                       "retencao": jan.hist.retencao,
+                       "formato_gravacao": jan.hist.formato_gravacao,
+                       "gravando": jan.barra_grav is not None},
             "editor": {"caixa": _caixa(ed, jan), "zoom": ed.zoom, "ox": ed.ox, "oy": ed.oy,
                        "imagem": [ed.base.get_width(), ed.base.get_height()] if ed.base else None,
                        "itens": len(ed.itens), "tipos": [i["t"] for i in ed.itens]},
@@ -105,3 +109,47 @@ def grava_overlay(ov):
         return ov.get_visible()
 
     GLib.timeout_add(300, grava)
+
+
+def grava_barra_gravacao(barra):
+    """Posicao e estado da barra flutuante de gravacao (arquivo CAPTURE_TEST_GEOM + .grav)."""
+    base = os.environ.get("CAPTURE_TEST_GEOM")
+    if not base:
+        return
+    arq = base + ".grav"
+
+    def grava():
+        if not barra.get_visible():
+            try:
+                os.unlink(arq)
+            except OSError:
+                pass
+            return False
+        try:
+            xid = None
+            try:
+                gi.require_version("GdkX11", "4.0")
+                from gi.repository import GdkX11  # noqa: F401
+                if barra.get_surface() is not None:
+                    xid = barra.get_surface().get_xid()
+            except Exception:
+                pass
+            dados = {
+                "xid": xid,
+                "janela": [barra.get_width(), barra.get_height()],
+                "transform": list(barra.get_surface_transform()),
+                "pos_x11": list(barra.pos_x11),
+                "area_gravada": list(barra.area_px),
+                "tempo": barra.lb_tempo.get_label(),
+                "formato": barra.lb_fmt.get_label(),
+                "botoes": {"parar": _caixa(barra.b_parar, barra)} if barra.b_parar.get_mapped() else {},
+            }
+            tmp = arq + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(dados, f)
+            os.replace(tmp, arq)
+        except Exception:
+            traceback.print_exc()
+        return True
+
+    GLib.timeout_add(200, grava)

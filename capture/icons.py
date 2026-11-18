@@ -218,6 +218,28 @@ def ic_lixeira(cr):
             (4.5, 4.5, 5.2, 13, 10.8, 13, 11.5, 4.5), (6.8, 7, 6.8, 10.8), (9.2, 7, 9.2, 10.8))
 
 
+def ic_gravar(cr):
+    cr.arc(8, 8, 5.5, 0, 2 * math.pi)
+    cr.stroke()
+    cr.arc(8, 8, 2.6, 0, 2 * math.pi)
+    cr.fill()
+
+
+def ic_parar(cr):
+    _ret(cr, 4.0, 4.0, 8.0, 8.0, 1.5)
+    cr.fill()
+
+
+def ic_video(cr):
+    _ret(cr, 2.2, 3.2, 11.6, 9.6, 1.8)
+    cr.stroke()
+    cr.move_to(6.6, 5.6)
+    cr.line_to(10.6, 8.0)
+    cr.line_to(6.6, 10.4)
+    cr.close_path()
+    cr.fill()
+
+
 ICONES = {k[3:]: v for k, v in globals().items() if k.startswith("ic_")}
 
 

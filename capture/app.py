@@ -5,6 +5,8 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
+import threading
 
 import cairo
 import gi
@@ -16,9 +18,10 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID, ATRASOS, CORES, ICONE, MODOS, NOME, PRGNAME
-from .arquivos import nome_captura, nome_livre, pasta_capturas, pasta_para_exibir
+from .arquivos import nome_captura, nome_gravacao, nome_livre, pasta_capturas, pasta_para_exibir
 from . import exportar
 from .editor import Editor, cores_padrao, espessuras_padrao, proporcional
+from .gravar import FORMATOS_GRAVACAO, Gravador, formatar_duracao, posicionar_barra, tem_ffmpeg
 from .historico import RETENCOES, Registro, rotulo_data
 from .icons import Icone, botao
 from .overlay import Sessao
@@ -67,6 +70,15 @@ headerbar { background: @cap_surface; color: @cap_text; box-shadow: none;
 button.capturar { background: @cap_accent; color: @cap_accent_fg; border-radius: 10px; font-weight: 700;
                   min-height: 30px; padding: 0 10px; box-shadow: none; border: none; }
 button.capturar:hover { background: shade(@cap_accent, 1.08); }
+.caixa-gravar { border: 1px solid @cap_edge; border-radius: 10px; background: alpha(@cap_text, 0.04); }
+.caixa-gravar button.gravar { min-height: 30px; padding: 0 9px; border-radius: 9px 0 0 9px;
+                              background: none; border: none; box-shadow: none; color: @cap_text; font-weight: 600; }
+.caixa-gravar button.gravar:hover { background: alpha(#EF4444, 0.14); color: #EF4444; }
+.caixa-gravar .formato-grav > button { min-width: 0; min-height: 30px; padding: 0 7px; border-radius: 0 9px 9px 0;
+                                       border: none; border-left: 1px solid @cap_edge; background: none;
+                                       box-shadow: none; color: alpha(@cap_text, 0.82); }
+.caixa-gravar .formato-grav > button:hover { background: alpha(@cap_text, 0.08); color: @cap_text; }
+.caixa-gravar .formato-grav label { font-size: 0.78em; font-weight: 700; letter-spacing: 0.3px; }
 headerbar button.discreto { min-width: 34px; min-height: 32px; padding: 0; border-radius: 10px; background: none;
                             box-shadow: none; color: @cap_text; }
 headerbar button.discreto:hover { background: alpha(@cap_text, 0.08); }
@@ -104,6 +116,16 @@ tabbar tab:selected { background: alpha(@cap_accent, 0.14); color: @cap_text; }
 .data-hist { font-weight: 600; font-size: 0.88em; }
 .sub-hist { font-size: 0.80em; }
 .acoes-hist button { min-width: 28px; min-height: 28px; padding: 0; border-radius: 8px; }
+
+.barra-gravacao { background: @cap_raised; border: 1px solid @cap_edge; padding: 6px 10px; }
+.ponto-grav { background: #EF4444; border-radius: 5px; min-width: 10px; min-height: 10px; }
+.tempo-grav { font-weight: 700; font-size: 0.95em; font-variant-numeric: tabular-nums; padding: 0 2px; }
+.fmt-grav { font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 6px;
+            background: alpha(@cap_text, 0.08); color: alpha(@cap_text, 0.80); }
+button.parar-grav { background: #EF4444; color: #FFFFFF; border-radius: 8px; font-weight: 700;
+                    min-height: 28px; padding: 0 10px; border: none; box-shadow: none; }
+button.parar-grav:hover { background: #DC2626; }
+button.parar-grav:disabled { opacity: 0.55; }
 """
 
 
@@ -163,10 +185,101 @@ def decodifica_caminho(v):
     return v
 
 
+class BarraGravacao(Gtk.Window):
+    """Barra compacta com contador e botao Parar, posicionada fora da area gravada."""
+
+    def __init__(self, jan, area_px, formato):
+        super().__init__(application=jan.get_application(), title="Gravando — " + NOME,
+                         decorated=False, resizable=False)
+        self.jan = jan
+        self.area_px = tuple(area_px)
+        self.pos_x11 = (0, 0)
+
+        caixa = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
+        caixa.add_css_class("barra-gravacao")
+
+        self.ponto = Gtk.Box(valign=Gtk.Align.CENTER)
+        self.ponto.add_css_class("ponto-grav")
+        caixa.append(self.ponto)
+
+        self.lb_tempo = Gtk.Label(label="00:00", valign=Gtk.Align.CENTER)
+        self.lb_tempo.add_css_class("tempo-grav")
+        caixa.append(self.lb_tempo)
+
+        self.lb_fmt = Gtk.Label(label=(formato or "mp4").upper(), valign=Gtk.Align.CENTER)
+        self.lb_fmt.add_css_class("fmt-grav")
+        caixa.append(self.lb_fmt)
+
+        self.lb_parar = Gtk.Label(label="Parar")
+        cx_p = Gtk.Box(spacing=6)
+        cx_p.append(Icone("parar", 14))
+        cx_p.append(self.lb_parar)
+        self.b_parar = Gtk.Button(child=cx_p, tooltip_text="Parar e salvar gravação")
+        self.b_parar.add_css_class("parar-grav")
+        self.b_parar.connect("clicked", lambda *_: self.jan.parar_gravacao())
+        caixa.append(self.b_parar)
+
+        self.set_child(caixa)
+        tec = Gtk.EventControllerKey()
+        tec.connect("key-pressed", self._tecla)
+        self.add_controller(tec)
+        self.connect("close-request", self._fechando)
+
+    def _tecla(self, _c, tecla, *_):
+        if tecla == Gdk.KEY_Escape:
+            self.jan.parar_gravacao(cancelar=self.jan.gravador is None)
+            return True
+        return False
+
+    def _fechando(self, _jan):
+        self.jan.parar_gravacao(cancelar=self.jan.gravador is None)
+        return True
+
+    def posicionar_fora(self):
+        """Move esta barra no X11 para fora da area gravada."""
+        mons = []
+        esc_padrao = 1
+        ms = Gdk.Display.get_default().get_monitors()
+        for i in range(ms.get_n_items()):
+            m = ms.get_item(i)
+            g = m.get_geometry()
+            esc = m.get_scale_factor()
+            if i == 0:
+                esc_padrao = esc
+            mons.append((g.x * esc, g.y * esc, g.width * esc, g.height * esc))
+        surf = self.get_surface()
+        esc = surf.get_scale_factor() if surf is not None else esc_padrao
+        bw = max(210, self.get_width() * esc) if self.get_width() > 20 else 236 * esc
+        bh = max(40, self.get_height() * esc) if self.get_height() > 10 else 46 * esc
+        bx, by = posicionar_barra(self.area_px, mons, bw, bh)
+        self.pos_x11 = (bx, by)
+        if surf is not None:
+            try:
+                gi.require_version("GdkX11", "4.0")
+                from gi.repository import GdkX11  # noqa: F401
+                x11.posicionar_janela_x11(surf.get_xid(), bx, by, acima=True)
+            except Exception:
+                pass
+        return False
+
+    def atualizar_tempo(self, segundos):
+        self.lb_tempo.set_label(formatar_duracao(segundos))
+
+    def modo_salvando(self):
+        self.b_parar.set_sensitive(False)
+        self.lb_parar.set_label("Salvando…")
+
+
 class Janela(Adw.ApplicationWindow):
     def __init__(self, app):
-        super().__init__(application=app, title=NOME, default_width=760, default_height=560)
+        super().__init__(application=app, title=NOME, default_width=840, default_height=560)
         self.sessao = None
+        self.barra_grav = None
+        self.gravador = None
+        self._cap_grav = None
+        self._timer_grav = None
+        self._timer_contagem = None
+        self._finalizando_grav = False
         self.salvo_em = None
         self.modo = MODOS[0][0]
         self.atraso = ATRASOS[0][0]
@@ -182,7 +295,7 @@ class Janela(Adw.ApplicationWindow):
         self._sinc_hist = False
         self._sinc_anon = False
 
-        # ---- cabecalho: historico, titulo, anonimo | modos + atraso | copiar, salvar, capturar
+        # ---- cabecalho: historico, titulo, anonimo | modos + atraso | copiar, salvar, gravar, capturar
         cab = Adw.HeaderBar()
         self.b_historico = botao("historico", "Histórico de capturas (Ctrl+H)", alternar=True)
         self.b_historico.add_css_class("discreto")
@@ -220,7 +333,7 @@ class Janela(Adw.ApplicationWindow):
         cx = Gtk.Box(spacing=6)
         cx.append(Icone("relogio"))
         cx.append(self.lb_atraso)
-        self.mb_atraso = Gtk.MenuButton(tooltip_text="Atraso antes de capturar")
+        self.mb_atraso = Gtk.MenuButton(tooltip_text="Atraso antes de capturar ou gravar")
         self.mb_atraso.add_css_class("atraso")
         self.mb_atraso.set_child(cx)
         lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
@@ -245,6 +358,36 @@ class Janela(Adw.ApplicationWindow):
         self.b_capturar.add_css_class("capturar")
         self.b_capturar.connect("clicked", lambda *_: self.nova_captura())
         cab.pack_end(self.b_capturar)
+
+        cx_grav = Gtk.Box(spacing=0)
+        cx_grav.add_css_class("caixa-gravar")
+        self.b_gravar = botao("gravar", "Gravar a tela (Ctrl+G)", "Gravar", plano=False)
+        self.b_gravar.add_css_class("gravar")
+        self.b_gravar.connect("clicked", lambda *_: self.nova_gravacao())
+        cx_grav.append(self.b_gravar)
+        self.lb_formato = Gtk.Label(label=self.hist.formato_gravacao.upper())
+        self.mb_formato = Gtk.MenuButton(tooltip_text="Formato da gravação (MP4 ou GIF)")
+        self.mb_formato.add_css_class("formato-grav")
+        self.mb_formato.set_child(self.lb_formato)
+        pop_fmt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                          margin_top=4, margin_bottom=4, margin_start=4, margin_end=4)
+        self.b_formato = {}
+        gr_f = None
+        rotulos_fmt = {"mp4": "Vídeo MP4", "gif": "Animação GIF"}
+        for cod_f, _ in FORMATOS_GRAVACAO:
+            bf = Gtk.ToggleButton(label=rotulos_fmt.get(cod_f, cod_f.upper()))
+            bf.add_css_class("flat")
+            if gr_f:
+                bf.set_group(gr_f)
+            gr_f = gr_f or bf
+            bf.connect("clicked", self._formato_grav_escolhido, cod_f)
+            self.b_formato[cod_f] = bf
+            pop_fmt.append(bf)
+        self.b_formato[self.hist.formato_gravacao].set_active(True)
+        self.mb_formato.set_popover(Gtk.Popover(child=pop_fmt))
+        cx_grav.append(self.mb_formato)
+        cab.pack_end(cx_grav)
+
         self.b_salvar = botao("salvar", "Salvar como (Ctrl+S)")
         self.b_salvar.add_css_class("discreto")
         self.b_salvar.connect("clicked", lambda *_: self.salvar_como())
@@ -350,8 +493,8 @@ class Janela(Adw.ApplicationWindow):
         tt = Gtk.Label(label=NOME)
         tt.add_css_class("title-1")
         vazio.append(tt)
-        aj = Gtk.Label(label="Pressione Print para capturar, ou escolha um modo.\n"
-                             "A captura é copiada e salva automaticamente.", justify=Gtk.Justification.CENTER)
+        aj = Gtk.Label(label="Pressione Print para capturar, escolha um modo ou clique em Gravar.\n"
+                             "As capturas e gravações são salvas automaticamente.", justify=Gtk.Justification.CENTER)
         aj.add_css_class("mudo")
         vazio.append(aj)
         cartoes = Gtk.Box(spacing=10, halign=Gtk.Align.CENTER, margin_top=12)
@@ -415,7 +558,7 @@ class Janela(Adw.ApplicationWindow):
         self.add_controller(tec)
         teste.grava_geometria(self)
 
-    # ---- modo e atraso
+    # ---- modo, atraso e formato de gravacao
     def _modo_escolhido(self, b, cod):
         if b.get_active():
             self.modo = cod
@@ -430,6 +573,19 @@ class Janela(Adw.ApplicationWindow):
         self.lb_atraso.set_label("%ds" % seg)
         b.set_active(True)
         self.mb_atraso.popdown()
+
+    def _formato_grav_escolhido(self, b, fmt):
+        self._define_formato_gravacao(fmt)
+        b.set_active(True)
+        self.mb_formato.popdown()
+
+    def _define_formato_gravacao(self, fmt):
+        cod = (fmt or "").lower()
+        if cod in dict(FORMATOS_GRAVACAO):
+            self.hist.definir_formato_gravacao(cod)
+            self.lb_formato.set_label(cod.upper())
+            if cod in self.b_formato:
+                self.b_formato[cod].set_active(True)
 
     # ---- ferramentas
     def _ferr(self, b, cod):
@@ -466,6 +622,8 @@ class Janela(Adw.ApplicationWindow):
         t = Gdk.keyval_to_lower(tecla)
         if ctrl and t == Gdk.KEY_n:
             self.nova_captura()
+        elif ctrl and t == Gdk.KEY_g:
+            self.nova_gravacao()
         elif ctrl and t == Gdk.KEY_h:
             self.b_historico.set_active(not self.b_historico.get_active())
         elif ctrl and t == Gdk.KEY_c and self.editor.base:
@@ -484,9 +642,9 @@ class Janela(Adw.ApplicationWindow):
             return False
         return True
 
-    # ---- captura
+    # ---- captura e gravacao
     def nova_captura(self, modo=None, atraso=None):
-        if self.sessao:
+        if self.sessao or self.barra_grav:
             return
         if modo in dict(MODOS):
             self._define_modo(modo)
@@ -516,6 +674,226 @@ class Janela(Adw.ApplicationWindow):
                 self.get_application().quit()
             return
         self.abrir(img, novo=True)
+
+    def nova_gravacao(self, modo=None, formato=None, atraso=None):
+        if self.barra_grav is not None:
+            self.parar_gravacao()
+            return
+        if self.sessao:
+            return
+        if formato:
+            self._define_formato_gravacao(formato)
+        if not tem_ffmpeg():
+            self.present()
+            self.mostra_erro("O FFmpeg não foi encontrado no sistema para gravar a tela.")
+            return
+        if modo in dict(MODOS):
+            self._define_modo(modo)
+        modo_grav = self.modo if self.modo != "livre" else "ret"
+        atraso_grav = self.atraso if atraso is None else atraso
+        self._visivel = self.get_visible()
+        self.set_visible(False)
+        espera_jan = 0.35 if self._visivel else 0.0
+        if modo_grav == "tela":
+            self._contagem_restante = 0
+            self.sessao = Sessao(self.get_application(), "tela", espera_jan + atraso_grav,
+                                 self._area_gravacao_escolhida, apenas_area=True)
+        else:
+            self._contagem_restante = int(atraso_grav)
+            self.sessao = Sessao(self.get_application(), modo_grav, espera_jan,
+                                 self._area_gravacao_escolhida, apenas_area=True)
+
+    def _area_gravacao_escolhida(self, area_px, erro=None):
+        modo = self.sessao.modo if self.sessao else None
+        self.sessao = None
+        if modo in dict(MODOS):
+            self._define_modo(modo)
+        if erro:
+            ficou = self._visivel or self.abas.get_n_pages()
+            self.present()
+            self.mostra_erro(erro, None if ficou else self.get_application().quit)
+            return
+        if area_px is None:
+            if self._visivel or self.abas.get_n_pages():
+                self.present()
+            else:
+                self.get_application().quit()
+            return
+        self._finalizando_grav = False
+        self.barra_grav = BarraGravacao(self, area_px, self.hist.formato_gravacao)
+        self.barra_grav.present()
+        self.barra_grav.posicionar_fora()
+        GLib.timeout_add(50, self.barra_grav.posicionar_fora)
+        teste.grava_barra_gravacao(self.barra_grav)
+        if self._contagem_restante > 0:
+            self.barra_grav.lb_tempo.set_label("%ds…" % self._contagem_restante)
+            self._timer_contagem = GLib.timeout_add(1000, self._passo_contagem_grav)
+        else:
+            GLib.timeout_add(180, self._inicia_gravador)
+
+    def _passo_contagem_grav(self):
+        if self.barra_grav is None or self._finalizando_grav:
+            self._timer_contagem = None
+            return False
+        self._contagem_restante -= 1
+        if self._contagem_restante > 0:
+            self.barra_grav.lb_tempo.set_label("%ds…" % self._contagem_restante)
+            return True
+        self._timer_contagem = None
+        self.barra_grav.lb_tempo.set_label("00:00")
+        self._inicia_gravador()
+        return False
+
+    def _inicia_gravador(self):
+        if self.barra_grav is None or self._finalizando_grav:
+            return False
+        self.barra_grav.posicionar_fora()
+        fmt = self.hist.formato_gravacao
+        era_anon = self.hist.anonimo
+        pasta_anon = tempfile.mkdtemp(prefix="capture-grav-anon-") if era_anon else None
+        destino = nome_gravacao(pasta_anon if era_anon else pasta_capturas(), fmt)
+        self._era_anon_grav = era_anon
+        self._pasta_anon_grav = pasta_anon
+        try:
+            cap = x11.CapturadorRegiao(*self.barra_grav.area_px)
+            grav = Gravador(cap.w, cap.h, destino, formato=fmt,
+                            fonte_quadros=cap.quadro, para_superficie=cap.para_superficie)
+            grav.iniciar()
+        except Exception as e:
+            if "cap" in locals():
+                cap.fechar()
+            if pasta_anon:
+                shutil.rmtree(pasta_anon, ignore_errors=True)
+            self.barra_grav.destroy()
+            self.barra_grav = None
+            ficou = self._visivel or self.abas.get_n_pages()
+            self.present()
+            self.mostra_erro("Não foi possível iniciar a gravação:\n%s" % e,
+                             None if ficou else self.get_application().quit)
+            return False
+        self._cap_grav = cap
+        self.gravador = grav
+        self._timer_grav = GLib.timeout_add(250, self._tick_gravacao)
+        return False
+
+    def _tick_gravacao(self):
+        if self.barra_grav is None or self.gravador is None or self._finalizando_grav:
+            self._timer_grav = None
+            return False
+        self.barra_grav.atualizar_tempo(self.gravador.duracao())
+        return True
+
+    def parar_gravacao(self, cancelar=False):
+        if self._finalizando_grav or self.barra_grav is None:
+            return
+        self._finalizando_grav = True
+        if self._timer_contagem:
+            GLib.source_remove(self._timer_contagem)
+            self._timer_contagem = None
+        if self._timer_grav:
+            GLib.source_remove(self._timer_grav)
+            self._timer_grav = None
+        if self.gravador is None:
+            self.barra_grav.destroy()
+            self.barra_grav = None
+            self._finalizando_grav = False
+            if self._visivel or self.abas.get_n_pages():
+                self.present()
+            else:
+                self.get_application().quit()
+            return
+        self.barra_grav.modo_salvando()
+        grav, cap = self.gravador, self._cap_grav
+        self.gravador = self._cap_grav = None
+        era_anon = getattr(self, "_era_anon_grav", False)
+        pasta_anon = getattr(self, "_pasta_anon_grav", None)
+        self._pasta_anon_grav = None
+
+        def finaliza():
+            info, erro = None, None
+            try:
+                info = grav.parar(cancelar=cancelar)
+            except Exception as e:
+                erro = str(e)
+            finally:
+                if cap is not None:
+                    cap.fechar()
+            GLib.idle_add(self._gravacao_concluida, info, erro, cancelar, era_anon, pasta_anon)
+
+        threading.Thread(target=finaliza, name="capture-fim-grav", daemon=True).start()
+
+    def _gravacao_concluida(self, info, erro, cancelar, era_anon, pasta_anon):
+        if self.barra_grav is not None:
+            self.barra_grav.destroy()
+            self.barra_grav = None
+        self._finalizando_grav = False
+        if erro:
+            if pasta_anon:
+                shutil.rmtree(pasta_anon, ignore_errors=True)
+            ficou = self._visivel or self.abas.get_n_pages()
+            self.present()
+            self.mostra_erro("Não foi possível concluir a gravação:\n%s" % erro,
+                             None if ficou else self.get_application().quit)
+            return False
+        if cancelar or info is None:
+            if pasta_anon:
+                shutil.rmtree(pasta_anon, ignore_errors=True)
+            if self._visivel or self.abas.get_n_pages():
+                self.present()
+            else:
+                self.get_application().quit()
+            return False
+        if era_anon:
+            self.present()
+            self._salva_gravacao_anonima(info, pasta_anon)
+            return False
+        self.hist.adicionar(info["caminho"], info["miniatura_img"],
+                            tipo=info["formato"], duracao=info["duracao"])
+        self._atualiza_historico()
+        if self.abas.get_n_pages() == 0 and not self.divisao.get_show_sidebar():
+            self.b_historico.set_active(True)
+        self.present()
+        self._status("Gravação salva em " + pasta_para_exibir(info["caminho"]))
+        teste.grava_geometria(self)
+        return False
+
+    def _salva_gravacao_anonima(self, info, pasta_anon):
+        origem = info["caminho"]
+        fmt = info["formato"]
+        direto = os.environ.get("CAPTURE_TEST_SALVAR")
+        if direto:
+            try:
+                shutil.move(origem, direto)
+                self._status("Modo anônimo  ·  Salvo em " + pasta_para_exibir(direto))
+            finally:
+                if pasta_anon:
+                    shutil.rmtree(pasta_anon, ignore_errors=True)
+            return
+        pasta = pasta_capturas()
+        filtro = (("Vídeo MP4", "*.mp4"),) if fmt == "mp4" else (("Animação GIF", "*.gif"),)
+        dlg = self._dialogo_salvar("Salvar gravação (modo anônimo)", os.path.basename(origem), pasta, filtro)
+
+        def feito(d, res):
+            try:
+                arq = d.save_finish(res).get_path()
+            except GLib.Error:
+                if pasta_anon:
+                    shutil.rmtree(pasta_anon, ignore_errors=True)
+                self._status("Gravação anônima descartada")
+                return
+            if not arq.lower().endswith("." + fmt):
+                arq = nome_livre(arq + "." + fmt)
+            try:
+                os.makedirs(os.path.dirname(os.path.abspath(arq)), exist_ok=True)
+                shutil.move(origem, arq)
+                self._status("Modo anônimo  ·  Salvo em " + pasta_para_exibir(arq))
+            except Exception as e:
+                self._status("Não foi possível salvar: %s" % e)
+            finally:
+                if pasta_anon:
+                    shutil.rmtree(pasta_anon, ignore_errors=True)
+
+        dlg.save(self, None, feito)
 
     def mostra_erro(self, msg, depois=None):
         dlg = Adw.MessageDialog(transient_for=self, heading=NOME, body=msg)
@@ -553,7 +931,7 @@ class Janela(Adw.ApplicationWindow):
             lim_w, lim_h = min(lim_w, g.width - 80), min(lim_h, g.height - 100)
         # altura: cabecalho, barra de abas e o dock flutuante embaixo da imagem
         extra_w = 260 if self.divisao.get_show_sidebar() else 0
-        w, h = int(min(max(iw + 60 + extra_w, 720), lim_w)), int(min(max(ih + 240, 480), lim_h))
+        w, h = int(min(max(iw + 60 + extra_w, 780), lim_w)), int(min(max(ih + 240, 480), lim_h))
         if so_crescer:
             aw, ah = self.get_width(), self.get_height()
             if w <= aw and h <= ah:
@@ -662,7 +1040,7 @@ class Janela(Adw.ApplicationWindow):
         vz = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                      halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER,
                      margin_start=16, margin_end=16)
-        lb_vz = Gtk.Label(label="Nenhuma captura no histórico.\nAs próximas capturas aparecerão aqui.",
+        lb_vz = Gtk.Label(label="Nenhuma captura ou gravação no histórico.\nOs próximos registros aparecerão aqui.",
                           justify=Gtk.Justification.CENTER, wrap=True)
         lb_vz.add_css_class("mudo")
         vz.append(lb_vz)
@@ -742,14 +1120,21 @@ class Janela(Adw.ApplicationWindow):
             self.lista_hist.append(info["caixa"])
         self.pilha_hist.set_visible_child_name("lista")
 
+    @staticmethod
+    def _eh_gravacao(it):
+        tipo = (it.get("tipo") or os.path.splitext(it.get("caminho", ""))[1].lstrip(".")).lower()
+        return tipo in ("mp4", "gif"), (tipo or "png")
+
     def _cria_item_historico(self, it):
+        eh_grav, tipo = self._eh_gravacao(it)
+        dica_abrir = "Abrir gravação" if eh_grav else "Abrir numa aba nova"
         cartao = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         cartao.add_css_class("item-hist")
         cartao.set_tooltip_text(pasta_para_exibir(it["caminho"]))
 
         b_principal = Gtk.Button()
         b_principal.add_css_class("abrir-item")
-        b_principal.set_tooltip_text("Abrir numa aba nova")
+        b_principal.set_tooltip_text(dica_abrir)
         b_principal.connect("clicked", lambda _b, item=it: self._hist_abrir(item))
 
         linha = Gtk.Box(spacing=8)
@@ -757,6 +1142,7 @@ class Janela(Adw.ApplicationWindow):
         quadro.add_css_class("mini-quadro")
         quadro.set_overflow(Gtk.Overflow.HIDDEN)
         quadro.set_size_request(72, 48)
+        ic_padrao = "video" if eh_grav else "imagem"
         mini = self.hist.caminho_miniatura(it)
         if mini:
             try:
@@ -767,9 +1153,9 @@ class Janela(Adw.ApplicationWindow):
                 pic.set_vexpand(True)
                 quadro.append(pic)
             except Exception:
-                quadro.append(Icone("imagem", 20))
+                quadro.append(Icone(ic_padrao, 20))
         else:
-            quadro.append(Icone("imagem", 20))
+            quadro.append(Icone(ic_padrao, 20))
         linha.append(quadro)
 
         textos = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
@@ -778,7 +1164,15 @@ class Janela(Adw.ApplicationWindow):
         lb_data.add_css_class("data-hist")
         textos.append(lb_data)
         w, h = it.get("largura", 0), it.get("altura", 0)
-        sub = "%d × %d px" % (w, h) if w and h else os.path.basename(it["caminho"])
+        if eh_grav:
+            partes_sub = [tipo.upper()]
+            if it.get("duracao") is not None:
+                partes_sub.append(formatar_duracao(max(1, round(it["duracao"]))))
+            if w and h:
+                partes_sub.append("%d × %d" % (w, h))
+            sub = " · ".join(partes_sub)
+        else:
+            sub = "%d × %d px" % (w, h) if w and h else os.path.basename(it["caminho"])
         lb_sub = Gtk.Label(label=sub, xalign=0)
         lb_sub.add_css_class("mudo")
         lb_sub.add_css_class("sub-hist")
@@ -789,9 +1183,9 @@ class Janela(Adw.ApplicationWindow):
 
         acoes = Gtk.Box(spacing=2)
         acoes.add_css_class("acoes-hist")
-        b_abrir = botao("abrir", "Abrir numa aba nova")
+        b_abrir = botao("video" if eh_grav else "abrir", dica_abrir)
         b_abrir.connect("clicked", lambda _b, item=it: self._hist_abrir(item))
-        b_copiar = botao("copiar", "Copiar imagem")
+        b_copiar = botao("copiar", "Copiar arquivo" if eh_grav else "Copiar imagem")
         b_copiar.connect("clicked", lambda _b, item=it: self._hist_copiar(item))
         b_pasta = botao("pasta", "Abrir a pasta do arquivo")
         b_pasta.connect("clicked", lambda _b, item=it: self._hist_pasta(item))
@@ -812,11 +1206,54 @@ class Janela(Adw.ApplicationWindow):
         return False
 
     def _hist_abrir(self, it):
-        if self._confere_item_hist(it):
+        if not self._confere_item_hist(it):
+            return
+        eh_grav, _ = self._eh_gravacao(it)
+        if not eh_grav:
             self.abrir_arquivo(it["caminho"])
+            return
+        arq = Gio.File.new_for_path(it["caminho"])
+        lan = Gtk.FileLauncher.new(arq)
+
+        def pronto(obj, res):
+            try:
+                obj.launch_finish(res)
+            except Exception:
+                try:
+                    Gio.AppInfo.launch_default_for_uri(arq.get_uri(), None)
+                except Exception:
+                    self._status("Arquivo salvo em " + pasta_para_exibir(it["caminho"]))
+
+        lan.launch(self, None, pronto)
+
+    def _copia_uri_arquivo(self, caminho):
+        uri = (Gio.File.new_for_path(caminho).get_uri() + "\r\n").encode("utf-8")
+        ok = False
+        try:
+            if shutil.which("xclip") is None and x11.tem_xlib() and area.copiar(uri, tipo="text/uri-list"):
+                ok = True
+            elif shutil.which("xclip"):
+                p = subprocess.Popen(["xclip", "-selection", "clipboard", "-t", "text/uri-list", "-i"],
+                                     stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
+                p.stdin.write(uri)
+                p.stdin.close()
+                ok = p.wait(timeout=5) == 0
+            else:
+                prov = Gdk.ContentProvider.new_for_bytes("text/uri-list", GLib.Bytes.new(uri))
+                self.get_clipboard().set_content(prov)
+                ok = True
+        except Exception as e:
+            print("falha ao copiar arquivo:", e, file=sys.stderr)
+        self._status("Arquivo copiado para a área de transferência" if ok else "Não foi possível copiar")
+        return ok
 
     def _hist_copiar(self, it):
         if not self._confere_item_hist(it):
+            return
+        eh_grav, _ = self._eh_gravacao(it)
+        if eh_grav:
+            self._copia_uri_arquivo(it["caminho"])
             return
         try:
             with open(it["caminho"], "rb") as f:
@@ -1111,6 +1548,10 @@ class App(Adw.Application):
         self.jan = None
         self.add_main_option("novo", ord("n"), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
                              "Inicia uma captura imediatamente", None)
+        self.add_main_option("gravar", ord("g"), GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+                             "Inicia (ou encerra) uma gravação de tela", None)
+        self.add_main_option("formato", ord("f"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
+                             "Formato da gravação: mp4 ou gif", "FORMATO")
         self.add_main_option("modo", ord("m"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
                              "ret, janela, tela ou livre", "MODO")
         self.add_main_option("abrir", ord("a"), GLib.OptionFlags.NONE, GLib.OptionArg.FILENAME,
@@ -1147,10 +1588,14 @@ class App(Adw.Application):
         op = cl.get_options_dict().end().unpack()
         if not self.jan:
             self.jan = Janela(self)
+        if "formato" in op:
+            self.jan._define_formato_gravacao(op["formato"])
         if "abrir" in op:
             # relativo ao diretorio de quem chamou, nao ao da instancia ja aberta
             arq = cl.create_file_for_arg(decodifica_caminho(op["abrir"]))
             self.jan.abrir_arquivo(arq.get_path())
+        elif "gravar" in op:
+            self.jan.nova_gravacao(op.get("modo"), formato=op.get("formato"), atraso=0)
         elif "novo" in op or "modo" in op:
             self.jan.nova_captura(op.get("modo"), atraso=0 if "novo" in op else None)
         else:
