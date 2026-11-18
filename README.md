@@ -26,6 +26,9 @@ quiser, marca por cima antes de colar em outro lugar.
   Ctrl+W. Se a aba tiver alterações não salvas, o Capture pergunta antes.
   Com duas abas ou mais, o botão de documento no cabeçalho junta todas num PDF,
   uma página por aba.
+- Gravação de tela (botão Gravar no cabeçalho ou Ctrl+G): grave uma região,
+  uma janela ou a tela inteira em MP4 ou GIF, com contador de tempo ao vivo e
+  botão de parar fora da área gravada.
 - Histórico num painel lateral recolhível (botão no cabeçalho ou Ctrl+H), com
   miniatura, data e hora: reabra numa aba nova, copie, abra a pasta do arquivo ou
   remova da lista. Inclui opção de limpar a lista todo dia (mantendo os arquivos
@@ -158,6 +161,8 @@ Linha de comando:
 | `capture --novo` | inicia uma captura agora, sem atraso |
 | `capture --novo --modo ret\|janela\|tela\|livre` | idem, no modo indicado |
 | `capture --modo MODO` | também inicia uma captura agora, no modo indicado, usando o atraso escolhido na janela principal |
+| `capture --gravar` | inicia uma gravação de tela agora (ou para e salva, se já estiver gravando) |
+| `capture --gravar --formato mp4\|gif --modo ret\|janela\|tela` | grava no formato e no modo indicados |
 | `capture --abrir ARQUIVO.png` | abre um PNG no editor (caminho relativo vale a partir de onde você chamou) |
 
 Se o Capture já estiver aberto, os comandos são enviados à instância em execução.
@@ -171,6 +176,7 @@ No editor:
 | Atalho | Ação |
 | --- | --- |
 | Ctrl+N | nova captura |
+| Ctrl+G | gravar a tela |
 | Ctrl+H | abrir ou fechar o histórico |
 | Ctrl+C | copiar a imagem |
 | Ctrl+S | salvar como... (PNG, JPEG ou PDF) |
@@ -188,10 +194,11 @@ Na seleção de área: **Esc** cancela.
 
 Em `Capturas`, dentro da pasta de imagens do usuário (normalmente
 `~/Imagens/Capturas`, ou `~/Pictures/Capturas` em sistema em inglês), com nomes
-como `Captura de tela 2026-11-12 153000.png`. Duas capturas no mesmo segundo
-ganham ` (2)`, ` (3)`... no nome; nada é sobrescrito. No modo anônimo, a captura
-vai apenas para a aba e para a área de transferência, sem gravar arquivo em disco
-nem entrar no histórico.
+como `Captura de tela 2026-11-12 153000.png` e `Gravação de tela 2026-11-17 153000.mp4`
+(ou `.gif`). Duas capturas no mesmo segundo ganham ` (2)`, ` (3)`... no nome;
+nada é sobrescrito. No modo anônimo, as capturas vão apenas para a aba e para a
+área de transferência, e nas gravações você escolhe onde salvar ao parar — nada é
+gravado automaticamente em `Capturas` nem entra no histórico.
 
 ## Testes
 
@@ -223,7 +230,7 @@ As imagens desta página foram geradas por `docs/gerar_captura.py`.
 ## Estrutura
 
 ```
-capture/      pacote Python (app, overlay, editor, historico, icons, x11, arquivos)
+capture/      pacote Python (app, overlay, editor, gravar, historico, icons, x11, arquivos)
 data/         ícone SVG, modelo do .desktop e metainfo (AppStream)
 flatpak/      manifesto do pacote Flatpak
 docs/         imagens do README e o script que as gera
@@ -239,9 +246,10 @@ uninstall.sh  remoção
   pacote Flatpak com tudo incluso.
 - **1.1**: salvar em PNG, JPEG ou PDF; pixelar, girar e redimensionar;
   capturas em abas, com "juntar abas em PDF".
-- **1.2** (atual): histórico das capturas num painel lateral, limpeza diária da
-  lista e modo anônimo.
-- **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou GIF.
+- **1.2**: histórico das capturas num painel lateral, limpeza diária da lista
+  e modo anônimo.
+- **1.3** (atual): gravação de tela (região, janela ou tela inteira) em MP4 ou
+  GIF.
 - **1.4**: captura rolável, para páginas e janelas mais compridas que a tela.
 - **Depois**: suporte a Wayland (captura pelo portal do sistema).
 

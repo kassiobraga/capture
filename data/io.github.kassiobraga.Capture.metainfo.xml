@@ -18,6 +18,7 @@
       <li>Editor with pen, highlighter, eraser, shapes, arrows, text and crop</li>
       <li>Pixelate sensitive areas, rotate and resize</li>
       <li>Each capture opens in a tab; join all tabs into one PDF</li>
+      <li>Screen recording (region, window or full screen) exported as MP4 or GIF</li>
       <li>Capture history sidebar with optional daily list cleanup and private mode</li>
       <li>Save as PNG, JPEG or PDF</li>
       <li>Every capture is copied to the clipboard and saved as PNG automatically</li>
@@ -32,6 +33,7 @@
       <li xml:lang="pt_BR">Editor com caneta, marca-texto, borracha, formas, setas, texto e corte</li>
       <li xml:lang="pt_BR">Pixele áreas sensíveis, gire e redimensione</li>
       <li xml:lang="pt_BR">Cada captura abre numa aba; junte todas as abas num PDF</li>
+      <li xml:lang="pt_BR">Gravação de tela (região, janela ou tela inteira) em MP4 ou GIF</li>
       <li xml:lang="pt_BR">Histórico num painel lateral, com limpeza diária da lista e modo anônimo</li>
       <li xml:lang="pt_BR">Salve em PNG, JPEG ou PDF</li>
       <li xml:lang="pt_BR">Toda captura é copiada para a área de transferência e salva em PNG automaticamente</li>
@@ -75,12 +77,19 @@
   </categories>
   <keywords>
     <keyword>screenshot</keyword>
+    <keyword>screencast</keyword>
     <keyword>capture</keyword>
     <keyword>annotate</keyword>
     <keyword xml:lang="pt_BR">captura</keyword>
+    <keyword xml:lang="pt_BR">gravação</keyword>
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
+    <release version="1.3.0" date="2026-11-17">
+      <description>
+        <p>Screen recording for a region, window or full screen, exported as MP4 or GIF, with a live timer and a stop button placed outside the recorded area.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-11-17">
       <description>
         <p>Sidebar with capture history (reopen in a new tab, copy, open folder or remove), optional daily list cleanup, and private mode.</p>
