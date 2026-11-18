@@ -76,7 +76,7 @@ def _libx11():
     x = ctypes.CDLL(nome)
     x.XOpenDisplay.restype = ctypes.c_void_p
     x.XOpenDisplay.argtypes = [ctypes.c_char_p]
-    for f in ("XDefaultScreen", "XCloseDisplay", "XSync"):
+    for f in ("XDefaultScreen", "XCloseDisplay", "XSync", "XFlush"):
         getattr(x, f).argtypes = [ctypes.c_void_p] + ([ctypes.c_int] if f == "XSync" else [])
     x.XRootWindow.restype = ctypes.c_ulong
     x.XRootWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -84,6 +84,8 @@ def _libx11():
     x.XGetImage.restype = ctypes.POINTER(_XImage)
     x.XGetImage.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int, ctypes.c_uint,
                             ctypes.c_uint, ctypes.c_ulong, ctypes.c_int]
+    x.XMoveWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.c_int, ctypes.c_int]
+    x.XRaiseWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
     x.XSetErrorHandler.restype = ctypes.c_void_p
     x.XSetErrorHandler.argtypes = [ctypes.c_void_p]
     return x
@@ -275,3 +277,138 @@ def _listar_comandos(executa):
         if w > 20 and h > 20:
             res.append((x, y, w, h))
     return res
+
+
+# ---------------------------------------------------------------- gravacao e barra
+
+def _limita_na_raiz(x, y, w, h, tw, th):
+    """Prende o retangulo (x, y, w, h) dentro de (0, 0, tw, th)."""
+    x0 = max(0, min(int(x), tw - 1))
+    y0 = max(0, min(int(y), th - 1))
+    x1 = max(x0 + 1, min(int(x) + max(1, int(w)), tw))
+    y1 = max(y0 + 1, min(int(y) + max(1, int(h)), th))
+    return x0, y0, x1 - x0, y1 - y0
+
+
+class CapturadorRegiao:
+    """Mantem uma conexao X11 aberta para ler quadros BGR0 seguidos de uma regiao."""
+
+    def __init__(self, x, y, w, h):
+        self._lib = None
+        self._d_lib = None
+        self._raiz_lib = 0
+        self._d_xlib = None
+        self._raiz_xlib = None
+        self._fechado = False
+        try:
+            lib = _libx11()
+            d = lib.XOpenDisplay(None)
+            if not d:
+                raise RuntimeError("nao foi possivel abrir o display X")
+            tela = lib.XDefaultScreen(d)
+            tw, th = lib.XDisplayWidth(d, tela), lib.XDisplayHeight(d, tela)
+            self.x, self.y, self.w, self.h = _limita_na_raiz(x, y, w, h, tw, th)
+            self._lib = lib
+            self._d_lib = d
+            self._raiz_lib = lib.XRootWindow(d, tela)
+            return
+        except Exception:
+            if self._d_lib and self._lib:
+                self._lib.XCloseDisplay(self._d_lib)
+                self._d_lib = None
+            if X is None:
+                raise
+        d = _abre()
+        raiz = d.screen().root
+        geo = raiz.get_geometry()
+        self.x, self.y, self.w, self.h = _limita_na_raiz(x, y, w, h, geo.width, geo.height)
+        self._d_xlib = d
+        self._raiz_xlib = raiz
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.fechar()
+
+    def quadro(self):
+        """Devolve bytes BGR0 (w * h * 4) do retangulo na tela."""
+        if self._fechado:
+            raise RuntimeError("capturador ja foi fechado")
+        w, h = self.w, self.h
+        linha = w * 4
+        if self._d_lib is not None:
+            im = self._lib.XGetImage(self._d_lib, self._raiz_lib, self.x, self.y,
+                                     w, h, ctypes.c_ulong(-1).value, 2)
+            if not im:
+                raise RuntimeError("o servidor X recusou o quadro")
+            try:
+                r = im.contents
+                if r.bits_per_pixel != 32 or r.byte_order != 0 or r.depth not in (24, 32):
+                    raise RuntimeError("formato de pixel nao suportado (%d bpp)" % r.bits_per_pixel)
+                passo = r.bytes_per_line
+                bruto = ctypes.string_at(r.data, passo * h)
+                if passo == linha:
+                    return bruto
+                return b"".join(bruto[i * passo:i * passo + linha] for i in range(h))
+            finally:
+                ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)(im.contents.f[1])(im)
+        dados = self._raiz_xlib.get_image(self.x, self.y, w, h, X.ZPixmap, 0xFFFFFFFF).data
+        return dados if isinstance(dados, bytes) else bytes(dados)
+
+    def para_superficie(self, dados):
+        """Converte um quadro BGR0 em cairo.ImageSurface (RGB24)."""
+        return _para_cairo(dados, self.w, self.h, self.w * 4)
+
+    def fechar(self):
+        if self._fechado:
+            return
+        self._fechado = True
+        if self._d_lib is not None:
+            self._lib.XCloseDisplay(self._d_lib)
+            self._d_lib = None
+        if self._d_xlib is not None:
+            self._d_xlib.close()
+            self._d_xlib = None
+
+
+def posicionar_janela_x11(xid, x, y, acima=True):
+    """Move a janela `xid` para (x, y) na raiz X11 e a mantem no topo."""
+    if not xid:
+        return False
+    px, py = int(round(x)), int(round(y))
+    if X is not None:
+        try:
+            from Xlib.protocol import event
+            d = _abre()
+            try:
+                raiz = d.screen().root
+                jan = d.create_resource_object("window", int(xid))
+                jan.configure(x=px, y=py, stack_mode=X.Above)
+                if acima:
+                    st = d.intern_atom("_NET_WM_STATE")
+                    ab = d.intern_atom("_NET_WM_STATE_ABOVE")
+                    sk = d.intern_atom("_NET_WM_STATE_STICKY")
+                    ev = event.ClientMessage(window=jan, client_type=st, data=(32, [1, ab, sk, 1, 0]))
+                    raiz.send_event(ev, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
+                d.sync()
+                return True
+            finally:
+                d.close()
+        except Exception:
+            pass
+    try:
+        lib = _libx11()
+        d = lib.XOpenDisplay(None)
+        if d:
+            try:
+                lib.XMoveWindow(d, int(xid), px, py)
+                if acima:
+                    lib.XRaiseWindow(d, int(xid))
+                lib.XFlush(d)
+                return True
+            finally:
+                lib.XCloseDisplay(d)
+    except Exception:
+        pass
+    return False

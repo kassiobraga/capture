@@ -32,6 +32,14 @@ def nome_captura(pasta, agora=None):
     return nome_livre(os.path.join(pasta, "Captura de tela %s.png" % agora.strftime("%Y-%m-%d %H%M%S")))
 
 
+def nome_gravacao(pasta, ext="mp4", agora=None):
+    """Caminho livre para uma gravacao nova dentro de `pasta` (cria a pasta)."""
+    os.makedirs(pasta, exist_ok=True)
+    agora = agora or datetime.datetime.now()
+    limpa = (ext or "mp4").lstrip(".").lower() or "mp4"
+    return nome_livre(os.path.join(pasta, "Gravação de tela %s.%s" % (agora.strftime("%Y-%m-%d %H%M%S"), limpa)))
+
+
 def pasta_para_exibir(caminho):
     """Troca o diretorio pessoal por ~ para mostrar na interface."""
     home = os.path.expanduser("~")

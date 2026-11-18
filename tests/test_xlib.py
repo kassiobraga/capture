@@ -37,6 +37,13 @@ class Xlib(unittest.TestCase):
     def test_listar_janelas_nao_falha(self):
         self.assertIsInstance(x11.listar_janelas(), list)
 
+    def test_capturador_regiao_le_quadro_bgr0(self):
+        with x11.CapturadorRegiao(10, 15, 96, 64) as cap:
+            q = cap.quadro()
+            self.assertEqual(len(q), 96 * 64 * 4)
+            sup = cap.para_superficie(q)
+            self.assertEqual((sup.get_width(), sup.get_height()), (96, 64))
+
     @unittest.skipUnless(shutil.which("xclip"), "sem xclip para ler a area de transferencia")
     def test_copia_pequena_e_grande(self):
         for n in (1000, 2_000_000):  # a grande passa pelo protocolo INCR

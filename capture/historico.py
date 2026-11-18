@@ -8,10 +8,25 @@ import cairo
 from gi.repository import GLib
 
 from . import APP_ID
+from .gravar import FORMATOS_GRAVACAO, extrair_quadro_cairo
 
 RETENCOES = [("manter", "Manter histórico"), ("diaria", "Limpar a lista todo dia")]
 LARGURA_MINI = 200
 ALTURA_MINI = 130
+
+
+def _tipo_arquivo(caminho):
+    ext = os.path.splitext(caminho or "")[1].lstrip(".").lower()
+    return ext if ext in ("png", "mp4", "gif") else "png"
+
+
+def _carrega_imagem_item(caminho):
+    if _tipo_arquivo(caminho) in ("mp4", "gif"):
+        return extrair_quadro_cairo(caminho)
+    try:
+        return cairo.ImageSurface.create_from_png(caminho)
+    except Exception:
+        return None
 
 
 def pastas_padrao(app_id=None):
@@ -101,12 +116,18 @@ class Registro:
         ret = prefs.get("retencao", "manter")
         self.retencao = ret if ret in dict(RETENCOES) else "manter"
         self.anonimo = bool(prefs.get("anonimo", False))
+        fmt = str(prefs.get("formato_gravacao", "mp4")).lower()
+        self.formato_gravacao = fmt if fmt in dict(FORMATOS_GRAVACAO) else "mp4"
         bruto = _le_json(self.arq_registro, [])
         self._itens = [x for x in bruto if isinstance(x, dict)] if isinstance(bruto, list) else []
         self.sincronizar(agora=agora)
 
     def _salva_prefs(self):
-        _grava_json(self.arq_prefs, {"retencao": self.retencao, "anonimo": self.anonimo})
+        _grava_json(self.arq_prefs, {
+            "retencao": self.retencao,
+            "anonimo": self.anonimo,
+            "formato_gravacao": self.formato_gravacao,
+        })
 
     def _salva_registro(self):
         _grava_json(self.arq_registro, self._itens)
@@ -130,6 +151,14 @@ class Registro:
     def definir_anonimo(self, ativo):
         """Liga ou desliga o modo anonimo e persiste nas preferencias."""
         self.anonimo = bool(ativo)
+        self._salva_prefs()
+
+    def definir_formato_gravacao(self, formato):
+        """Define o formato padrao da gravacao ('mp4' ou 'gif') e persiste."""
+        fmt = (formato or "").lower()
+        if fmt not in dict(FORMATOS_GRAVACAO):
+            raise ValueError("formato de gravacao desconhecido: %s" % formato)
+        self.formato_gravacao = fmt
         self._salva_prefs()
 
     def sincronizar(self, agora=None):
@@ -158,7 +187,7 @@ class Registro:
         """Itens validos, do mais novo para o mais antigo."""
         return self.sincronizar(agora=agora)
 
-    def adicionar(self, caminho, img=None, agora=None):
+    def adicionar(self, caminho, img=None, agora=None, tipo=None, duracao=None):
         """Registra `caminho` no topo do historico; no modo anonimo nao faz nada."""
         self.sincronizar(agora=agora)
         if self.anonimo:
@@ -166,11 +195,9 @@ class Registro:
         cam = os.path.abspath(caminho)
         if not os.path.isfile(cam):
             return None
+        tipo_item = (tipo or _tipo_arquivo(cam)).lower()
         if img is None:
-            try:
-                img = cairo.ImageSurface.create_from_png(cam)
-            except Exception:
-                img = None
+            img = _carrega_imagem_item(cam)
         restantes = []
         for it in self._itens:
             if it.get("caminho") == cam:
@@ -191,11 +218,14 @@ class Registro:
         novo = {
             "id": ident,
             "caminho": cam,
+            "tipo": tipo_item,
             "criado_em": instante,
             "largura": img.get_width() if img is not None else 0,
             "altura": img.get_height() if img is not None else 0,
             "miniatura": nome_mini,
         }
+        if duracao is not None:
+            novo["duracao"] = round(max(0.0, float(duracao)), 2)
         self._itens = [novo] + restantes
         self._salva_registro()
         return dict(novo)
@@ -234,11 +264,12 @@ class Registro:
             return destino
         cam = item.get("caminho")
         if cam and os.path.isfile(cam):
-            try:
-                img = cairo.ImageSurface.create_from_png(cam)
-                if gera_miniatura(img, destino):
-                    item["miniatura"] = nome
-                    return destino
-            except Exception:
-                return None
+            img = _carrega_imagem_item(cam)
+            if img is not None:
+                try:
+                    if gera_miniatura(img, destino):
+                        item["miniatura"] = nome
+                        return destino
+                except Exception:
+                    return None
         return None
