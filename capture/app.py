@@ -189,7 +189,7 @@ class BarraGravacao(Gtk.Window):
     """Barra compacta com contador e botao Parar, posicionada fora da area gravada."""
 
     def __init__(self, jan, area_px, formato):
-        super().__init__(application=jan.get_application(), title="Gravando — " + NOME,
+        super().__init__(application=jan.get_application(), title="Gravando: " + NOME,
                          decorated=False, resizable=False)
         self.jan = jan
         self.area_px = tuple(area_px)
@@ -270,11 +270,82 @@ class BarraGravacao(Gtk.Window):
         self.lb_parar.set_label("Salvando…")
 
 
+class BarraRolagem(Gtk.Window):
+    """Barra compacta com 'Rolando...' e botao Parar, fora da area rolada."""
+
+    def __init__(self, jan, area_px):
+        super().__init__(application=jan.get_application(), title="Rolando: " + NOME,
+                         decorated=False, resizable=False)
+        self.jan = jan
+        self.area_px = tuple(area_px)
+        self.pos_x11 = (0, 0)
+
+        caixa = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
+        caixa.add_css_class("barra-gravacao")
+
+        lb = Gtk.Label(label="Rolando…", valign=Gtk.Align.CENTER)
+        lb.add_css_class("tempo-grav")
+        caixa.append(lb)
+
+        cx_p = Gtk.Box(spacing=6)
+        cx_p.append(Icone("parar", 14))
+        cx_p.append(Gtk.Label(label="Parar"))
+        b_parar = Gtk.Button(child=cx_p, tooltip_text="Parar rolagem (Esc)")
+        b_parar.add_css_class("parar-grav")
+        b_parar.connect("clicked", lambda *_: self.jan.parar_rolagem())
+        caixa.append(b_parar)
+
+        self.set_child(caixa)
+        tec = Gtk.EventControllerKey()
+        tec.connect("key-pressed", self._tecla)
+        self.add_controller(tec)
+        self.connect("close-request", self._fechando)
+
+    def _tecla(self, _c, tecla, *_):
+        if tecla == Gdk.KEY_Escape:
+            self.jan.parar_rolagem()
+            return True
+        return False
+
+    def _fechando(self, _jan):
+        self.jan.parar_rolagem()
+        return True
+
+    def posicionar_fora(self):
+        """Move esta barra no X11 para fora da area rolada."""
+        mons = []
+        esc_padrao = 1
+        ms = Gdk.Display.get_default().get_monitors()
+        for i in range(ms.get_n_items()):
+            m = ms.get_item(i)
+            g = m.get_geometry()
+            esc = m.get_scale_factor()
+            if i == 0:
+                esc_padrao = esc
+            mons.append((g.x * esc, g.y * esc, g.width * esc, g.height * esc))
+        surf = self.get_surface()
+        esc = surf.get_scale_factor() if surf is not None else esc_padrao
+        bw = max(180, self.get_width() * esc) if self.get_width() > 20 else 200 * esc
+        bh = max(40, self.get_height() * esc) if self.get_height() > 10 else 46 * esc
+        bx, by = posicionar_barra(self.area_px, mons, bw, bh)
+        self.pos_x11 = (bx, by)
+        if surf is not None:
+            try:
+                gi.require_version("GdkX11", "4.0")
+                from gi.repository import GdkX11  # noqa: F401
+                x11.posicionar_janela_x11(surf.get_xid(), bx, by, acima=True)
+            except Exception:
+                pass
+        return False
+
+
 class Janela(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, title=NOME, default_width=840, default_height=560)
         self.sessao = None
         self.barra_grav = None
+        self.barra_rol = None
+        self._cancelar_rolagem = False
         self.gravador = None
         self._cap_grav = None
         self._timer_grav = None
@@ -644,11 +715,14 @@ class Janela(Adw.ApplicationWindow):
 
     # ---- captura e gravacao
     def nova_captura(self, modo=None, atraso=None):
-        if self.sessao or self.barra_grav:
+        if self.sessao or self.barra_grav or self.barra_rol:
             return
         if modo in dict(MODOS):
             self._define_modo(modo)
         modo = self.modo
+        if modo == "rolavel":
+            self.nova_rolagem(atraso=atraso)
+            return
         if atraso is None:
             atraso = self.atraso
         self._visivel = self.get_visible()
@@ -675,6 +749,74 @@ class Janela(Adw.ApplicationWindow):
             return
         self.abrir(img, novo=True)
 
+    def nova_rolagem(self, atraso=None):
+        if self.sessao or self.barra_grav or self.barra_rol:
+            return
+        self._define_modo("rolavel")
+        self._cancelar_rolagem = False
+        self._visivel = self.get_visible()
+        self.set_visible(False)
+        espera_jan = 0.35 if self._visivel else 0.0
+        self.sessao = Sessao(self.get_application(), "ret", espera_jan,
+                             self._area_rolagem_escolhida, apenas_area=True, rolar=True)
+
+    def parar_rolagem(self):
+        self._cancelar_rolagem = True
+
+    def _area_rolagem_escolhida(self, area_px, erro=None):
+        self.sessao = None
+        if erro:
+            ficou = self._visivel or self.abas.get_n_pages()
+            self.present()
+            self.mostra_erro(erro, None if ficou else self.get_application().quit)
+            return
+        if area_px is None:
+            if self._visivel or self.abas.get_n_pages():
+                self.present()
+            else:
+                self.get_application().quit()
+            return
+        self.barra_rol = BarraRolagem(self, area_px)
+        self.barra_rol.present()
+        self.barra_rol.posicionar_fora()
+        GLib.timeout_add(50, self.barra_rol.posicionar_fora)
+        GLib.timeout_add(350, lambda: self._iniciar_thread_rolagem(area_px))
+
+    def _iniciar_thread_rolagem(self, area_px):
+        if self.barra_rol is None or self._cancelar_rolagem:
+            self._finalizar_rolagem(None)
+            return False
+        from .rolagem import rolar_regiao
+
+        def worker():
+            res = rolar_regiao(*area_px, cancelado=lambda: self._cancelar_rolagem)
+            GLib.idle_add(self._finalizar_rolagem, res)
+
+        threading.Thread(target=worker, name="capture-rolagem", daemon=True).start()
+        return False
+
+    def _finalizar_rolagem(self, resultado):
+        if self.barra_rol is not None:
+            self.barra_rol.destroy()
+            self.barra_rol = None
+        self.present()
+        if resultado is None:
+            return
+        if resultado.quadros <= 1 and resultado.motivo == "cancelado" and not resultado.linhas:
+            return
+        img = resultado.superficie()
+        self.abrir(img, novo=True)
+        mensagens = {
+            "fim": "Página inteira capturada",
+            "limite_altura": "Parou no limite de 30000 px",
+            "limite_quadros": "Parou no limite de quadros",
+            "sem_sobreposicao": "Não foi possível emendar: o conteúdo mudou durante a rolagem. Mostrando o que foi capturado",
+            "cancelado": "Rolagem interrompida"
+        }
+        aviso = mensagens.get(resultado.motivo)
+        if aviso and resultado.quadros > 1:
+            self._status(aviso)
+
     def nova_gravacao(self, modo=None, formato=None, atraso=None):
         if self.barra_grav is not None:
             self.parar_gravacao()
@@ -689,7 +831,7 @@ class Janela(Adw.ApplicationWindow):
             return
         if modo in dict(MODOS):
             self._define_modo(modo)
-        modo_grav = self.modo if self.modo != "livre" else "ret"
+        modo_grav = self.modo if self.modo not in ("livre", "rolavel") else "ret"
         atraso_grav = self.atraso if atraso is None else atraso
         self._visivel = self.get_visible()
         self.set_visible(False)
@@ -1553,7 +1695,7 @@ class App(Adw.Application):
         self.add_main_option("formato", ord("f"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
                              "Formato da gravação: mp4 ou gif", "FORMATO")
         self.add_main_option("modo", ord("m"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
-                             "ret, janela, tela ou livre", "MODO")
+                             "ret, janela, tela, livre ou rolavel", "MODO")
         self.add_main_option("abrir", ord("a"), GLib.OptionFlags.NONE, GLib.OptionArg.FILENAME,
                              "Abre um PNG no editor", "ARQUIVO")
 

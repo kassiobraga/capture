@@ -60,6 +60,12 @@ def ic_livre(cr):
     cr.stroke()
 
 
+def ic_rolavel(cr):
+    _ret(cr, 2.5, 2, 11, 12, 1.5)
+    cr.stroke()
+    _linhas(cr, (8, 5, 8, 10), (6, 8, 8, 10, 10, 8))
+
+
 def ic_capturar(cr):
     cr.set_dash([2.4, 1.8])
     _ret(cr, 2.2, 2.2, 11.6, 11.6, 2.5)

@@ -2,8 +2,8 @@
 
 Documento para quem vai continuar o desenvolvimento (pessoa ou agente de IA).
 Descreve o que o Capture é, como o código está organizado, como se testa e se
-publica, o que já foi decidido e o que falta fazer. Estado em 17/11/2026,
-versão publicada **1.1.3**.
+publica, o que já foi decidido e o que falta fazer. Estado em 19/11/2026,
+versão **1.4.0**.
 
 - Repositório: <https://github.com/kassiobraga/capture> (público, licença MIT)
 - Página de instalação: <https://kassiobraga.github.io/capture/>
@@ -19,10 +19,13 @@ libadwaita. Fluxo principal: a pessoa aperta Print, seleciona uma área, e a
 imagem já sai copiada para a área de transferência e salva em PNG. Se quiser,
 anota por cima no editor antes de colar em outro lugar.
 
-### Recursos atuais (1.1.3)
+### Recursos atuais (1.4.0)
 
-- Modos de captura: retângulo, janela, tela cheia e forma livre; atraso opcional
+- Modos de captura: retângulo, janela, tela cheia, forma livre e rolável; atraso opcional
   de 3, 5 ou 10 s; seleção em vários monitores ao mesmo tempo.
+- **Captura rolável**: captura páginas e janelas mais compridas que a tela; o Capture
+  rola automaticamente via XTest (python-xlib), tira fotos a cada passo e emenda os quadros
+  por comparação exata de linhas de pixels, preservando cabeçalho e rodapé fixos uma única vez.
 - Editor: caneta, marca-texto, borracha (apaga a marcação clicada), retângulo,
   elipse, linha, seta, texto, cortar, **pixelar** (tecla B), girar 90° e
   redimensionar (px ou %, com proporção). Desfazer/refazer em tudo.
@@ -44,6 +47,9 @@ anota por cima no editor antes de colar em outro lugar.
 - A tecla Print não é configurada automaticamente no Flatpak (o sandbox não
   mexe nos atalhos do Cinnamon); a pessoa cria um atalho para
   `flatpak run io.github.kassiobraga.Capture --novo`.
+- **Limites da rolagem**: cabeçalhos que mudam de tamanho, páginas com rolagem infinita,
+  animações e vídeos no meio da página, e aplicativos que ignoram a roda do mouse podem
+  resultar em emenda parcial; o Capture entrega o que conseguiu capturar.
 
 ---
 
@@ -64,8 +70,12 @@ capture/
                 (Gtk.DrawingArea): desenho, gestos, pixelar/girar/redimensionar
   overlay.py    Sessao de captura (foto da tela + janelas de selecao por monitor),
                 funcao foto() com as alternativas de captura
-  x11.py        foto da tela (libX11 via ctypes; reserva python-xlib) e lista de
-                janelas visiveis (python-xlib; reserva xprop/xwininfo)
+  costura.py    emenda de quadros por comparacao exata de linhas de pixels,
+                deteccao de cabecalho e rodape fixos (SemSobreposicao, Costura)
+  rolagem.py    laco de rolagem e captura automatica em thread separada (Rolador,
+                rolar_regiao, Resultado)
+  x11.py        foto da tela (libX11 via ctypes; reserva python-xlib), lista de
+                janelas visiveis e rolar_roda (XTest fake_input)
   area.py       area de transferencia X11 propria (processo em segundo plano que
                 serve image/png, com INCR), no lugar do xclip
   exportar.py   gravacao em PNG/JPEG (GdkPixbuf)/PDF (cairo) e PDF de varias paginas
@@ -104,6 +114,10 @@ install.sh      instalacao manual em ~/.local (modo desenvolvimento)
   no Flatpak (sem esse esquema) lê `gtk-theme` pelo portal
   `org.freedesktop.portal.Settings` (o libadwaita troca o nome interno do tema
   para "Adwaita-empty", por isso a leitura direta do portal).
+- **Captura rolável**: `costura.py` faz a emenda exata de linhas de pixels (BGR0)
+  e trata cabeçalho e rodapé fixos; `rolagem.py` executa o laço de captura em thread
+  separada e rola o conteúdo via `x11.rolar_roda` (XTest fake_input). O resultado é
+  entregue à interface via `GLib.idle_add` e aberto numa nova aba.
 - **NVIDIA**: o manifesto define `GSK_RENDERER=cairo`. Com driver NVIDIA, os
   renderizadores GL/Vulkan do GTK falham no sandbox X11 e a janela não abre.
 - **Variáveis de ambiente**: `CAPTURE_DIR` (pasta das capturas),
@@ -288,18 +302,6 @@ Painel lateral com as capturas feitas pelo Capture.
   extensão antes de escolher. GIF: gerar paleta (ffmpeg `palettegen` ou similar).
 - Interface: botão de parar visível (fora da área gravada), contador de tempo,
   opção de áudio do sistema/microfone ficaria para depois.
-
-### 1.4: Captura rolável (página inteira)
-
-Pedido original: algo como a extensão GoFullPage (print da página inteira, com
-opções de baixar em PDF/PNG e editar).
-
-- Caminho sugerido: rolar a janela escolhida via XTest (python-xlib tem a
-  extensão), capturar cada tela e emendar achando a sobreposição entre quadros.
-  Limites: cabeçalhos fixos se repetem e animações atrapalham.
-- Alternativa perfeita, mas é um segundo projeto: extensão para Chrome/Firefox
-  que conversa com o Capture.
-- O resultado abre numa aba normal, e daí já valem salvar em PNG/PDF e editar.
 
 ### Depois: Wayland
 

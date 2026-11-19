@@ -11,8 +11,10 @@ quiser, marca por cima antes de colar em outro lugar.
 
 ## Recursos
 
-- Quatro modos de captura: retângulo, janela, tela cheia e forma livre, escolhidos
-  no seletor do cabeçalho ou nos cartões da tela inicial.
+- Cinco modos de captura: retângulo, janela, tela cheia, forma livre e rolável,
+  escolhidos no seletor do cabeçalho ou nos cartões da tela inicial.
+- Captura rolável: capture páginas da web e documentos compridos em uma única
+  imagem contínua, com rolagem automática e emenda de quadros.
 - Atraso opcional de 3, 5 ou 10 segundos (botão do relógio, ao lado do seletor).
 - Funciona com mais de um monitor: a seleção aparece em todos.
 - Editor com caneta, marca-texto, borracha, formas (retângulo, elipse, linha e
@@ -51,6 +53,10 @@ Limites conhecidos:
 - "Tela cheia" captura todos os monitores juntos, numa imagem só.
 - A borracha apaga a marcação que você clicar (o traço da forma, não o miolo
   dela); um arraste da borracha conta como um único passo de desfazer.
+- Limites da captura rolável: cabeçalhos que mudam de tamanho, páginas com
+  rolagem infinita, animações e vídeos no meio da página, e aplicativos que
+  ignoram a roda do mouse podem resultar em emenda parcial; o Capture entrega o
+  que conseguiu.
 
 ## Instalação fácil (Flatpak)
 
@@ -159,7 +165,7 @@ Linha de comando:
 | --- | --- |
 | `capture` | abre a janela principal |
 | `capture --novo` | inicia uma captura agora, sem atraso |
-| `capture --novo --modo ret\|janela\|tela\|livre` | idem, no modo indicado |
+| `capture --novo --modo ret|janela|tela|livre|rolavel` | idem, no modo indicado (o modo rolável inicia a captura com rolagem automática) |
 | `capture --modo MODO` | também inicia uma captura agora, no modo indicado, usando o atraso escolhido na janela principal |
 | `capture --gravar` | inicia uma gravação de tela agora (ou para e salva, se já estiver gravando) |
 | `capture --gravar --formato mp4\|gif --modo ret\|janela\|tela` | grava no formato e no modo indicados |
@@ -197,7 +203,7 @@ Em `Capturas`, dentro da pasta de imagens do usuário (normalmente
 como `Captura de tela 2026-11-12 153000.png` e `Gravação de tela 2026-11-17 153000.mp4`
 (ou `.gif`). Duas capturas no mesmo segundo ganham ` (2)`, ` (3)`... no nome;
 nada é sobrescrito. No modo anônimo, as capturas vão apenas para a aba e para a
-área de transferência, e nas gravações você escolhe onde salvar ao parar — nada é
+área de transferência, e nas gravações você escolhe onde salvar ao parar: nada é
 gravado automaticamente em `Capturas` nem entra no histórico.
 
 ## Testes
@@ -248,9 +254,9 @@ uninstall.sh  remoção
   capturas em abas, com "juntar abas em PDF".
 - **1.2**: histórico das capturas num painel lateral, limpeza diária da lista
   e modo anônimo.
-- **1.3** (atual): gravação de tela (região, janela ou tela inteira) em MP4 ou
+- **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou
   GIF.
-- **1.4**: captura rolável, para páginas e janelas mais compridas que a tela.
+- **1.4** (atual): captura rolável, para páginas e janelas mais compridas que a tela.
 - **Depois**: suporte a Wayland (captura pelo portal do sistema).
 
 ## Licença

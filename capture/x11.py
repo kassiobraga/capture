@@ -54,6 +54,38 @@ def tem_captura():
         return False
 
 
+# ---------------------------------------------------------------- rolagem por XTest
+
+def rolar_roda(x, y, cliques=1, baixo=True, enviar=None):
+    """Envia cliques da roda do mouse na posicao (x, y) via XTest."""
+    if cliques < 1:
+        raise ValueError("cliques deve ser >= 1")
+    if enviar is None:
+        try:
+            from Xlib.ext import xtest as _xtest
+        except ImportError:
+            raise RuntimeError("python-xlib nao esta instalado")
+
+        def enviar(tipo, btn, ex, ey):
+            d = _abre()
+            try:
+                if tipo == "move":
+                    _xtest.fake_input(d, X.MotionNotify, 0, x=ex, y=ey)
+                elif tipo == "press":
+                    _xtest.fake_input(d, X.ButtonPress, btn, x=ex, y=ey)
+                elif tipo == "release":
+                    _xtest.fake_input(d, X.ButtonRelease, btn, x=ex, y=ey)
+                d.sync()
+            finally:
+                d.close()
+
+    B = 5 if baixo else 4
+    enviar("move", 0, x, y)
+    for _ in range(cliques):
+        enviar("press", B, x, y)
+        enviar("release", B, x, y)
+
+
 # ---------------------------------------------------------------- foto da tela
 
 class _XImage(ctypes.Structure):

@@ -91,6 +91,8 @@ DICAS = {"ret": "Arraste para selecionar  ·  Esc cancela",
          "livre": "Desenhe em volta da área  ·  Esc cancela"}
 DICAS_GRAVAR = {"ret": "Arraste a região para gravar  ·  Esc cancela",
                 "janela": "Clique em uma janela para gravar  ·  Esc cancela"}
+DICAS_ROLAR = {"ret": "Arraste a área para rolar e capturar  ·  Esc cancela",
+               "janela": "Clique na janela para rolar e capturar  ·  Esc cancela"}
 # a sobreposicao e sempre escura (a tela e escurecida): usa a paleta escura do tema
 ACENTO = rgb(ESCURO["accent"])
 FUNDO_ESCURO = (0.0, 0.0, 0.0)   # escurecimento neutro
@@ -183,7 +185,7 @@ class Sobreposicao(Gtk.Window):
         self._trava = True
         self.bts[self.s.modo].set_active(True)
         self._trava = False
-        dicas = DICAS_GRAVAR if self.s.apenas_area else DICAS
+        dicas = DICAS_ROLAR if self.s.rolar else (DICAS_GRAVAR if self.s.apenas_area else DICAS)
         self.dica.set_label(dicas.get(self.s.modo, ""))
         self.pill.set_visible(True)
         self.dica.set_visible(True)
@@ -351,9 +353,10 @@ def foto():
 class Sessao:
     """Uma captura ou selecao de area: tira a foto da tela e, se preciso, abre a selecao."""
 
-    def __init__(self, app, modo, atraso, pronto, apenas_area=False):
+    def __init__(self, app, modo, atraso, pronto, apenas_area=False, rolar=False):
         self.apenas_area = bool(apenas_area)
-        if self.apenas_area and modo == "livre":
+        self.rolar = bool(rolar)
+        if self.apenas_area and modo in ("livre", "rolavel"):
             modo = "ret"
         self.app, self.modo, self.pronto = app, modo, pronto
         self.img, self.janelas, self.sobre = None, [], []

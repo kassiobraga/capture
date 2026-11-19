@@ -26,7 +26,7 @@
     </ul>
     <p>Capture requires an X11 session.</p>
     <p xml:lang="pt_BR">Aperte Print, selecione o que quer, e a imagem já fica copiada e salva. Se quiser, marque por cima antes de colar em outro lugar.</p>
-    <ul xml:lang="pt_BR">
+    <ul>
       <li xml:lang="pt_BR">Quatro modos de captura: retângulo, janela, tela cheia e forma livre</li>
       <li xml:lang="pt_BR">Atraso opcional de 3, 5 ou 10 segundos</li>
       <li xml:lang="pt_BR">Funciona com mais de um monitor</li>
@@ -85,6 +85,11 @@
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
+    <release version="1.4.0" date="2026-11-19">
+      <description>
+        <p>Scrolling capture for web pages and long windows, automatically scrolling and stitching frames into a single image.</p>
+      </description>
+    </release>
     <release version="1.3.0" date="2026-11-17">
       <description>
         <p>Screen recording for a region, window or full screen, exported as MP4 or GIF, with a live timer and a stop button placed outside the recorded area.</p>
