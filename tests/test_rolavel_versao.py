@@ -37,9 +37,9 @@ class Versao(unittest.TestCase):
         self.assertRegex(r, r"\*\*1\.4\*\* \(atual\)")
         self.assertNotRegex(r, r"\*\*1\.3\*\* \(atual\)")
 
-    def test_pagina_do_site_cita_a_1_4(self):
+    def test_pagina_do_site_cita_a_1_4_1(self):
         s = fonte("flatpak/site/index.html")
-        self.assertRegex(s, r"1\.4\s*<span class=\"etiqueta\">dispon")
+        self.assertRegex(s, r"1\.4\.1\s*<span class=\"etiqueta\">dispon")
         self.assertIn("rolável", s.lower())
 
     def test_documento_de_passagem_atualizado(self):
