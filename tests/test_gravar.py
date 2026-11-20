@@ -1,13 +1,22 @@
 """Testes unitarios da gravacao de tela (MP4 e GIF), posicionamento da barra e historico."""
 import datetime
 import os
+import re
 import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import MagicMock
+
+import cairo
+import gi
+
+gi.require_version("Gdk", "4.0")
+from gi.repository import Gdk  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
+from capture.app import Janela  # noqa: E402
 from capture.arquivos import nome_gravacao  # noqa: E402
 from capture.gravar import (  # noqa: E402
     Gravador,
@@ -18,6 +27,7 @@ from capture.gravar import (  # noqa: E402
     tem_ffmpeg,
 )
 from capture.historico import Registro  # noqa: E402
+from capture.icons import ic_gravar  # noqa: E402
 
 
 def _intercepta(a, b):
@@ -170,6 +180,95 @@ class GravacaoUnitaria(unittest.TestCase):
         time.sleep(0.1)
         self.assertIsNone(g.parar(cancelar=True))
         self.assertFalse(os.path.exists(destino))
+
+
+class InterfaceGravacao(unittest.TestCase):
+    """Testes do botao discreto de gravacao e do popover de formatos."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+
+    def test_icone_gravar_desenha_circulo_vermelho_rec(self):
+        surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 16, 16)
+        cr = cairo.Context(surf)
+        # simula tema claro onde a cor de primeiro plano e escura
+        cr.set_source_rgba(0, 0, 0, 1)
+        ic_gravar(cr)
+        data = surf.get_data()
+        # pixel central (8, 8)
+        idx = (8 * 16 + 8) * 4
+        b, g, r, a = data[idx:idx + 4]
+        self.assertEqual((r, g, b, a), (239, 68, 68, 255))
+
+    def test_formato_grav_escolhido_atualiza_preferencia_fecha_popover_e_inicia(self):
+        reg = Registro(self.tmp.name, self.tmp.name, self.tmp.name)
+        jan = MagicMock()
+        jan.hist = reg
+        jan.b_formato = {"mp4": MagicMock(), "gif": MagicMock()}
+        jan.pop_gravar = MagicMock()
+        jan.nova_gravacao = MagicMock()
+        jan._define_formato_gravacao = lambda fmt: Janela._define_formato_gravacao(jan, fmt)
+
+        btn = jan.b_formato["gif"]
+        Janela._formato_grav_escolhido(jan, btn, "gif")
+
+        self.assertEqual(jan.hist.formato_gravacao, "gif")
+        btn.set_active.assert_called_with(True)
+        jan.pop_gravar.popdown.assert_called_once()
+        jan.nova_gravacao.assert_called_once_with(formato="gif")
+
+    def test_define_formato_gravacao_sem_lb_formato(self):
+        reg = Registro(self.tmp.name, self.tmp.name, self.tmp.name)
+        jan = MagicMock()
+        jan.hist = reg
+        jan.b_formato = {"mp4": MagicMock(), "gif": MagicMock()}
+
+        Janela._define_formato_gravacao(jan, "mp4")
+        self.assertEqual(jan.hist.formato_gravacao, "mp4")
+        jan.b_formato["mp4"].set_active.assert_called_with(True)
+
+    def test_atalho_ctrl_g_abre_popover(self):
+        jan = MagicMock()
+        jan.get_focus.return_value = None
+        jan.barra_grav = None
+        jan.pop_gravar = MagicMock()
+
+        res = Janela._tecla(jan, None, Gdk.KEY_g, None, Gdk.ModifierType.CONTROL_MASK)
+        self.assertTrue(res)
+        jan.pop_gravar.popup.assert_called_once()
+
+    def test_atalho_ctrl_g_para_gravacao_quando_ativa(self):
+        jan = MagicMock()
+        jan.get_focus.return_value = None
+        jan.barra_grav = object()
+        jan.parar_gravacao = MagicMock()
+
+        res = Janela._tecla(jan, None, Gdk.KEY_g, None, Gdk.ModifierType.CONTROL_MASK)
+        self.assertTrue(res)
+        jan.parar_gravacao.assert_called_once()
+
+    def test_estrutura_codigo_cabecalho_e_css(self):
+        raiz = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+        with open(os.path.join(raiz, "capture", "app.py"), encoding="utf-8") as f:
+            conteudo = f.read()
+
+        # elementos removidos
+        self.assertNotIn(".caixa-gravar", conteudo)
+        self.assertNotIn("mb_formato", conteudo)
+        self.assertNotIn("lb_formato", conteudo)
+
+        # separador vertical e botao gravar na area central
+        self.assertIn("Gtk.Separator(orientation=Gtk.Orientation.VERTICAL", conteudo)
+        self.assertIn('botao("gravar", "Gravar a tela (Ctrl+G)", plano=False)', conteudo)
+
+        # opcoes do popover com rotulos corretos
+        self.assertIn('"Vídeo MP4"', conteudo)
+        self.assertIn('"Animação GIF"', conteudo)
+
+        # estilo CSS com hover vermelho suave
+        self.assertIn("button.gravar:hover", conteudo)
+        self.assertIn("alpha(#EF4444, 0.14)", conteudo)
 
 
 if __name__ == "__main__":

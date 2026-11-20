@@ -225,9 +225,8 @@ def ic_lixeira(cr):
 
 
 def ic_gravar(cr):
-    cr.arc(8, 8, 5.5, 0, 2 * math.pi)
-    cr.stroke()
-    cr.arc(8, 8, 2.6, 0, 2 * math.pi)
+    cr.set_source_rgb(0xEF / 255.0, 0x44 / 255.0, 0x44 / 255.0)
+    cr.arc(8, 8, 5.0, 0, 2 * math.pi)
     cr.fill()
 
 

@@ -64,22 +64,21 @@ headerbar { background: @cap_surface; color: @cap_text; box-shadow: none;
 .dica.some { opacity: 0; }
 
 .modos { background: none; padding: 0; }
-.modos button { min-width: 38px; min-height: 28px; }
-.atraso > button { min-width: 0; padding: 0 10px; min-height: 30px; background: none; }
+.modos button { min-width: 38px; min-height: 32px; margin-top: 8px; margin-bottom: 8px; }
+.atraso > button { min-width: 0; padding: 0 10px; min-height: 32px;
+                   margin-top: 8px; margin-bottom: 8px; background: none; }
 .atraso label { font-weight: 600; font-size: 0.92em; }
 button.capturar { background: @cap_accent; color: @cap_accent_fg; border-radius: 10px; font-weight: 700;
-                  min-height: 30px; padding: 0 10px; box-shadow: none; border: none; }
+                  min-height: 32px; margin-top: 8px; margin-bottom: 8px;
+                  padding: 0 10px; box-shadow: none; border: none; }
 button.capturar:hover { background: shade(@cap_accent, 1.08); }
-.caixa-gravar { border: 1px solid @cap_edge; border-radius: 10px; background: alpha(@cap_text, 0.04); }
-.caixa-gravar button.gravar { min-height: 30px; padding: 0 9px; border-radius: 9px 0 0 9px;
-                              background: none; border: none; box-shadow: none; color: @cap_text; font-weight: 600; }
-.caixa-gravar button.gravar:hover { background: alpha(#EF4444, 0.14); color: #EF4444; }
-.caixa-gravar .formato-grav > button { min-width: 0; min-height: 30px; padding: 0 7px; border-radius: 0 9px 9px 0;
-                                       border: none; border-left: 1px solid @cap_edge; background: none;
-                                       box-shadow: none; color: alpha(@cap_text, 0.82); }
-.caixa-gravar .formato-grav > button:hover { background: alpha(@cap_text, 0.08); color: @cap_text; }
-.caixa-gravar .formato-grav label { font-size: 0.78em; font-weight: 700; letter-spacing: 0.3px; }
-headerbar button.discreto { min-width: 34px; min-height: 32px; padding: 0; border-radius: 10px; background: none;
+headerbar separator { background: @cap_edge; min-width: 1px; }
+button.gravar { min-width: 38px; min-height: 28px; padding: 0; border-radius: 10px;
+                background: none; box-shadow: none; border: none; color: @cap_text; }
+button.gravar:hover { background: alpha(#EF4444, 0.14); }
+button.gravar:disabled { opacity: 0.35; }
+headerbar button.discreto { min-width: 34px; min-height: 32px; margin-top: 8px; margin-bottom: 8px;
+                            padding: 0; border-radius: 10px; background: none;
                             box-shadow: none; color: @cap_text; }
 headerbar button.discreto:hover { background: alpha(@cap_text, 0.08); }
 headerbar button.discreto:checked { background: alpha(@cap_accent, 0.18); color: @cap_accent; }
@@ -94,7 +93,18 @@ headerbar windowcontrols > button:hover { background: alpha(@cap_text, 0.08); }
 .amostra { min-width: 26px; min-height: 26px; padding: 0; border-radius: 13px; }
 .sobre { background: @cap_canvas; }
 tabbar .box { background: @cap_surface; border-bottom: 1px solid @cap_edge; box-shadow: none; }
+tabbar separator { background: none; }
+tabbar tab { min-height: 32px; min-width: 110px;
+             margin-top: 4px; margin-bottom: 4px; margin-left: 1px; margin-right: 1px;
+             border-radius: 8px; background: none; border: none; box-shadow: none;
+             color: @cap_text; padding: 0 6px; }
+tabbar tab:hover { background: alpha(@cap_text, 0.08); }
 tabbar tab:selected { background: alpha(@cap_accent, 0.14); color: @cap_text; }
+tabbar tab:selected:hover { background: alpha(@cap_accent, 0.20); }
+tabbar tab button, tabbar tab button.close { min-width: 20px; min-height: 20px; padding: 0; margin: 0;
+                                            border-radius: 6px; background: none; border: none;
+                                            box-shadow: none; color: alpha(@cap_text, 0.70); }
+tabbar tab button:hover, tabbar tab button.close:hover { background: alpha(@cap_text, 0.12); color: @cap_text; }
 .menu-imagem button { padding: 6px 10px; }
 
 .painel-hist { background: @cap_surface; border-right: 1px solid @cap_edge; }
@@ -370,27 +380,31 @@ class Janela(Adw.ApplicationWindow):
         cab = Adw.HeaderBar()
         self.b_historico = botao("historico", "Histórico de capturas (Ctrl+H)", alternar=True)
         self.b_historico.add_css_class("discreto")
+        self.b_historico.set_valign(Gtk.Align.CENTER)
         self.b_historico.connect("toggled", self._alternar_historico)
         cab.pack_start(self.b_historico)
         t = Gtk.Label(label=NOME)
         t.add_css_class("titulo-app")
+        t.set_valign(Gtk.Align.CENTER)
         cab.pack_start(t)
         self.b_anonimo = botao("anonimo", "Modo anônimo: não salva em disco nem registra no histórico",
                                alternar=True)
         self.b_anonimo.add_css_class("discreto")
+        self.b_anonimo.set_valign(Gtk.Align.CENTER)
         self._sinc_anon = True
         self.b_anonimo.set_active(self.hist.anonimo)
         self._sinc_anon = False
         self.b_anonimo.connect("toggled", self._anonimo_trocado)
         cab.pack_start(self.b_anonimo)
 
-        centro = Gtk.Box(spacing=10)
-        modos = Gtk.Box(spacing=2)
+        centro = Gtk.Box(spacing=10, valign=Gtk.Align.CENTER)
+        modos = Gtk.Box(spacing=2, valign=Gtk.Align.CENTER)
         modos.add_css_class("modos")
         self.b_modo = {}
         grupo = None
         for cod, nome in MODOS:
             b = botao(cod, nome, alternar=True, plano=False)
+            b.set_valign(Gtk.Align.CENTER)
             if grupo:
                 b.set_group(grupo)
             grupo = grupo or b
@@ -400,12 +414,45 @@ class Janela(Adw.ApplicationWindow):
         self.b_modo[self.modo].set_active(True)
         centro.append(modos)
 
+        sep = Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_top=8, margin_bottom=8)
+        centro.append(sep)
+
+        self.b_gravar = botao("gravar", "Gravar a tela (Ctrl+G)", plano=False)
+        self.b_gravar.add_css_class("gravar")
+        pop_fmt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                          margin_top=4, margin_bottom=4, margin_start=4, margin_end=4)
+        self.b_formato = {}
+        gr_f = None
+        rotulos_fmt = {"mp4": "Vídeo MP4", "gif": "Animação GIF"}
+        for cod_f, _ in FORMATOS_GRAVACAO:
+            bf = Gtk.ToggleButton(label=rotulos_fmt.get(cod_f, cod_f.upper()))
+            bf.add_css_class("flat")
+            if gr_f:
+                bf.set_group(gr_f)
+            gr_f = gr_f or bf
+            bf.connect("clicked", self._formato_grav_escolhido, cod_f)
+            self.b_formato[cod_f] = bf
+            pop_fmt.append(bf)
+        self.b_formato[self.hist.formato_gravacao].set_active(True)
+        self.pop_gravar = Gtk.Popover(child=pop_fmt)
+        self.pop_gravar.set_parent(self.b_gravar)
+        self.b_gravar.connect("destroy", lambda *_: self.pop_gravar.unparent())
+        self.b_gravar.connect("clicked", lambda *_: self.pop_gravar.popup())
+        self.b_gravar.get_popover = lambda: self.pop_gravar
+        self.b_gravar.popup = self.pop_gravar.popup
+        self.b_gravar.popdown = self.pop_gravar.popdown
+        if not tem_ffmpeg():
+            self.b_gravar.set_sensitive(False)
+            self.b_gravar.set_tooltip_text("O FFmpeg não foi encontrado no sistema para gravar a tela.")
+        centro.append(self.b_gravar)
+
         self.lb_atraso = Gtk.Label(label="0s")
         cx = Gtk.Box(spacing=6)
         cx.append(Icone("relogio"))
         cx.append(self.lb_atraso)
         self.mb_atraso = Gtk.MenuButton(tooltip_text="Atraso antes de capturar ou gravar")
         self.mb_atraso.add_css_class("atraso")
+        self.mb_atraso.set_valign(Gtk.Align.CENTER)
         self.mb_atraso.set_child(cx)
         lista = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=4, margin_bottom=4,
                         margin_start=4, margin_end=4)
@@ -427,48 +474,23 @@ class Janela(Adw.ApplicationWindow):
 
         self.b_capturar = botao("capturar", "Nova captura (Ctrl+N)", "Capturar", plano=False)
         self.b_capturar.add_css_class("capturar")
+        self.b_capturar.set_valign(Gtk.Align.CENTER)
         self.b_capturar.connect("clicked", lambda *_: self.nova_captura())
         cab.pack_end(self.b_capturar)
 
-        cx_grav = Gtk.Box(spacing=0)
-        cx_grav.add_css_class("caixa-gravar")
-        self.b_gravar = botao("gravar", "Gravar a tela (Ctrl+G)", "Gravar", plano=False)
-        self.b_gravar.add_css_class("gravar")
-        self.b_gravar.connect("clicked", lambda *_: self.nova_gravacao())
-        cx_grav.append(self.b_gravar)
-        self.lb_formato = Gtk.Label(label=self.hist.formato_gravacao.upper())
-        self.mb_formato = Gtk.MenuButton(tooltip_text="Formato da gravação (MP4 ou GIF)")
-        self.mb_formato.add_css_class("formato-grav")
-        self.mb_formato.set_child(self.lb_formato)
-        pop_fmt = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
-                          margin_top=4, margin_bottom=4, margin_start=4, margin_end=4)
-        self.b_formato = {}
-        gr_f = None
-        rotulos_fmt = {"mp4": "Vídeo MP4", "gif": "Animação GIF"}
-        for cod_f, _ in FORMATOS_GRAVACAO:
-            bf = Gtk.ToggleButton(label=rotulos_fmt.get(cod_f, cod_f.upper()))
-            bf.add_css_class("flat")
-            if gr_f:
-                bf.set_group(gr_f)
-            gr_f = gr_f or bf
-            bf.connect("clicked", self._formato_grav_escolhido, cod_f)
-            self.b_formato[cod_f] = bf
-            pop_fmt.append(bf)
-        self.b_formato[self.hist.formato_gravacao].set_active(True)
-        self.mb_formato.set_popover(Gtk.Popover(child=pop_fmt))
-        cx_grav.append(self.mb_formato)
-        cab.pack_end(cx_grav)
-
         self.b_salvar = botao("salvar", "Salvar como (Ctrl+S)")
         self.b_salvar.add_css_class("discreto")
+        self.b_salvar.set_valign(Gtk.Align.CENTER)
         self.b_salvar.connect("clicked", lambda *_: self.salvar_como())
         cab.pack_end(self.b_salvar)
         self.b_copiar = botao("copiar", "Copiar (Ctrl+C)")
         self.b_copiar.add_css_class("discreto")
+        self.b_copiar.set_valign(Gtk.Align.CENTER)
         self.b_copiar.connect("clicked", lambda *_: self.copiar())
         cab.pack_end(self.b_copiar)
         self.b_pdf = botao("pdf", "Juntar todas as abas num PDF")
         self.b_pdf.add_css_class("discreto")
+        self.b_pdf.set_valign(Gtk.Align.CENTER)
         self.b_pdf.connect("clicked", lambda *_: self.juntar_pdf())
         cab.pack_end(self.b_pdf)
         self.b_pdf.set_visible(False)
@@ -589,7 +611,7 @@ class Janela(Adw.ApplicationWindow):
         self.abas.connect("notify::n-pages", self._abas_mudaram)
         self.abas.connect("close-page", self._fechar_aba)
         # barra de abas logo abaixo do cabecalho, fora da area dos avisos
-        self.barra_abas = Adw.TabBar(view=self.abas, autohide=False)
+        self.barra_abas = Adw.TabBar(view=self.abas, autohide=False, expand_tabs=False)
         self.barra_abas.set_visible(False)
 
         self.pilha = Gtk.Stack()
@@ -648,14 +670,14 @@ class Janela(Adw.ApplicationWindow):
     def _formato_grav_escolhido(self, b, fmt):
         self._define_formato_gravacao(fmt)
         b.set_active(True)
-        self.mb_formato.popdown()
+        self.pop_gravar.popdown()
+        self.nova_gravacao(formato=fmt)
 
     def _define_formato_gravacao(self, fmt):
         cod = (fmt or "").lower()
         if cod in dict(FORMATOS_GRAVACAO):
             self.hist.definir_formato_gravacao(cod)
-            self.lb_formato.set_label(cod.upper())
-            if cod in self.b_formato:
+            if hasattr(self, "b_formato") and cod in self.b_formato:
                 self.b_formato[cod].set_active(True)
 
     # ---- ferramentas
@@ -694,7 +716,13 @@ class Janela(Adw.ApplicationWindow):
         if ctrl and t == Gdk.KEY_n:
             self.nova_captura()
         elif ctrl and t == Gdk.KEY_g:
-            self.nova_gravacao()
+            if self.barra_grav is not None:
+                self.parar_gravacao()
+            elif not tem_ffmpeg():
+                self.present()
+                self.mostra_erro("O FFmpeg não foi encontrado no sistema para gravar a tela.")
+            else:
+                self.pop_gravar.popup()
         elif ctrl and t == Gdk.KEY_h:
             self.b_historico.set_active(not self.b_historico.get_active())
         elif ctrl and t == Gdk.KEY_c and self.editor.base:

@@ -68,6 +68,10 @@ class GravacaoE2E(x.CasoE2E):
 
         with self.entrada() as ent:
             ent.clicar(*self.centro(g, "gravar"))
+            gp = x.espera(lambda: (d := app.geometria(com_imagem=False))
+                         and "formato_mp4" in d.get("botoes", {}) and d,
+                         5, 0.1, "popover de gravacao aberto")
+            ent.clicar(*self.centro(gp, "formato_mp4"))
             app.espera_janelas(len(self.jan.monitores()))
             time.sleep(0.5)
             ent.arrastar([(mx + 220, my + 160), (mx + 560, my + 380)])
@@ -168,6 +172,10 @@ class GravacaoE2E(x.CasoE2E):
             ent.clicar(*self.centro(g, "modo_tela"))
             time.sleep(0.2)
             ent.clicar(*self.centro(g, "gravar"))
+            gp = x.espera(lambda: (d := app.geometria(com_imagem=False))
+                         and "formato_mp4" in d.get("botoes", {}) and d,
+                         5, 0.1, "popover de gravacao aberto")
+            ent.clicar(*self.centro(gp, "formato_mp4"))
 
             bg = self.barra_grav(app)
             time.sleep(0.4)

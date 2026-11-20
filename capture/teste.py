@@ -32,12 +32,15 @@ def _grava(jan, arq):
             pass
         ed = jan.editor
         botoes = {"capturar": jan.b_capturar, "gravar": jan.b_gravar,
-                  "formato_gravacao": jan.mb_formato,
                   "copiar": jan.b_copiar, "salvar": jan.b_salvar,
                   "atraso": jan.mb_atraso, "formas": jan.mb_formas, "cor": jan.mb_cor,
                   "desfazer": jan.b_desf, "refazer": jan.b_refz,
                   "historico": jan.b_historico, "anonimo": jan.b_anonimo,
                   "hist_retencao": jan.mb_retencao, "hist_limpar": jan.b_limpar_hist}
+        if hasattr(jan, "b_formato"):
+            for k, b in jan.b_formato.items():
+                botoes["formato_" + k] = b
+                botoes["gravar_" + k] = b
         if jan.divisao.get_show_sidebar():
             for idx, info in enumerate(jan.itens_hist[:5]):
                 for ch in ("abrir", "copiar", "pasta", "remover"):
