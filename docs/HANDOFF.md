@@ -3,7 +3,7 @@
 Documento para quem vai continuar o desenvolvimento (pessoa ou agente de IA).
 Descreve o que o Capture é, como o código está organizado, como se testa e se
 publica, o que já foi decidido e o que falta fazer. Estado em 19/11/2026,
-versão **1.4.0**.
+versão **1.4.1**.
 
 - Repositório: <https://github.com/kassiobraga/capture> (público, licença MIT)
 - Página de instalação: <https://kassiobraga.github.io/capture/>
@@ -19,7 +19,7 @@ libadwaita. Fluxo principal: a pessoa aperta Print, seleciona uma área, e a
 imagem já sai copiada para a área de transferência e salva em PNG. Se quiser,
 anota por cima no editor antes de colar em outro lugar.
 
-### Recursos atuais (1.4.0)
+### Recursos atuais (1.4.1)
 
 - Modos de captura: retângulo, janela, tela cheia, forma livre e rolável; atraso opcional
   de 3, 5 ou 10 s; seleção em vários monitores ao mesmo tempo.
@@ -34,7 +34,7 @@ anota por cima no editor antes de colar em outro lugar.
   confirmação. Com 2+ abas, um botão no cabeçalho **junta todas num PDF**, uma
   página por aba.
 - **Gravação de tela**: gravação de região, janela ou tela inteira em MP4 e GIF
-  (botão Gravar no cabeçalho ou Ctrl+G), com contador de tempo e botão de parar fora da área gravada.
+  (botão REC com menu MP4/GIF ou Ctrl+G), com contador de tempo e botão de parar fora da área gravada.
 - **Histórico**: painel lateral recolhível (botão no cabeçalho ou Ctrl+H) com miniaturas,
   data e hora, reabertura em abas, cópia, limpeza diária da lista (mantendo os arquivos salvos)
   e modo anônimo.
@@ -255,7 +255,7 @@ CAPTURE_E2E=1 python3 -m unittest discover -s tests/e2e -t .
    saída seria a captura pelo compositor (portal `Screenshot` ou D-Bus do
    Cinnamon) em vez de `XGetImage`.
 2. **Prints do site e do README** (`docs/captura-*.png`) ainda são da 1.0 e
-   precisam mostrar a interface atual: cinco modos, botão Gravar, botão
+   precisam mostrar a interface atual: cinco modos, botão REC, botão
    Histórico e barra de abas. Devem ser refeitos num desktop real com compositor
    (sombra e fundo transparente): `docs/gerar_captura.py`, rodado no Mint do
    Kassio, com e sem `CAPTURE_TEMA=claro`.

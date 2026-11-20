@@ -28,9 +28,10 @@ quiser, marca por cima antes de colar em outro lugar.
   Ctrl+W. Se a aba tiver alterações não salvas, o Capture pergunta antes.
   Com duas abas ou mais, o botão de documento no cabeçalho junta todas num PDF,
   uma página por aba.
-- Gravação de tela (botão Gravar no cabeçalho ou Ctrl+G): grave uma região,
-  uma janela ou a tela inteira em MP4 ou GIF, com contador de tempo ao vivo e
-  botão de parar fora da área gravada.
+- Gravação de tela (botão com o ícone vermelho REC ao lado dos modos, que abre
+  um menu com MP4 ou GIF, ou Ctrl+G): grave uma região, uma janela ou a tela
+  inteira em MP4 ou GIF, com contador de tempo ao vivo e botão de parar fora da
+  área gravada.
 - Histórico num painel lateral recolhível (botão no cabeçalho ou Ctrl+H), com
   miniatura, data e hora: reabra numa aba nova, copie, abra a pasta do arquivo ou
   remova da lista. Inclui opção de limpar a lista todo dia (mantendo os arquivos
@@ -182,7 +183,7 @@ No editor:
 | Atalho | Ação |
 | --- | --- |
 | Ctrl+N | nova captura |
-| Ctrl+G | gravar a tela |
+| Ctrl+G | abre o menu de gravar (MP4 ou GIF) e, com gravação em andamento, para e salva |
 | Ctrl+H | abrir ou fechar o histórico |
 | Ctrl+C | copiar a imagem |
 | Ctrl+S | salvar como... (PNG, JPEG ou PDF) |
