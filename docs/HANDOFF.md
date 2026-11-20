@@ -33,6 +33,11 @@ anota por cima no editor antes de colar em outro lugar.
   ou com Ctrl+W; se a aba tiver alterações não salvas (título com "•"), pede
   confirmação. Com 2+ abas, um botão no cabeçalho **junta todas num PDF**, uma
   página por aba.
+- **Gravação de tela**: gravação de região, janela ou tela inteira em MP4 e GIF
+  (botão Gravar no cabeçalho ou Ctrl+G), com contador de tempo e botão de parar fora da área gravada.
+- **Histórico**: painel lateral recolhível (botão no cabeçalho ou Ctrl+H) com miniaturas,
+  data e hora, reabertura em abas, cópia, limpeza diária da lista (mantendo os arquivos salvos)
+  e modo anônimo.
 - Salvar como **PNG, JPEG ou PDF**, decidido pela extensão do nome.
 - Toda captura nova é copiada e salva automaticamente em `~/Imagens/Capturas`
   (pasta de imagens do usuário, via `GLib.get_user_special_dir`).
@@ -74,6 +79,8 @@ capture/
                 deteccao de cabecalho e rodape fixos (SemSobreposicao, Costura)
   rolagem.py    laco de rolagem e captura automatica em thread separada (Rolador,
                 rolar_regiao, Resultado)
+  gravar.py     gravação de tela em MP4 e GIF via FFmpeg, sem dependência de GTK (Gravador)
+  historico.py  histórico de capturas, cache de miniaturas e preferências em JSON (Registro)
   x11.py        foto da tela (libX11 via ctypes; reserva python-xlib), lista de
                 janelas visiveis e rolar_roda (XTest fake_input)
   area.py       area de transferencia X11 propria (processo em segundo plano que
@@ -247,10 +254,11 @@ CAPTURE_E2E=1 python3 -m unittest discover -s tests/e2e -t .
    a próxima hipótese é o compositor (Muffin) entregando um quadro parcial; a
    saída seria a captura pelo compositor (portal `Screenshot` ou D-Bus do
    Cinnamon) em vez de `XGetImage`.
-2. **Prints do site e do README** (`docs/captura-*.png`) ainda são da 1.0, sem a
-   barra de abas. Precisam ser refeitos num desktop real com compositor (sombra
-   e fundo transparente): `docs/gerar_captura.py`, rodado no Mint do Kassio, com
-   e sem `CAPTURE_TEMA=claro`.
+2. **Prints do site e do README** (`docs/captura-*.png`) ainda são da 1.0 e
+   precisam mostrar a interface atual: cinco modos, botão Gravar, botão
+   Histórico e barra de abas. Devem ser refeitos num desktop real com compositor
+   (sombra e fundo transparente): `docs/gerar_captura.py`, rodado no Mint do
+   Kassio, com e sem `CAPTURE_TEMA=claro`.
 3. Usuária Renata: instalar pelo link da página (se tiver a versão do arquivo
    antigo, desinstalar e reinstalar pelo link) e remover o Flameshot.
 
@@ -270,44 +278,38 @@ atualização automática.
 
 ---
 
-## 8. Roadmap (o que falta construir)
+## 8. Roadmap
 
-### 1.2: Histórico (próxima)
+### 1.2: Histórico (concluída)
 
-Painel lateral com as capturas feitas pelo Capture.
+Painel lateral recolhível com histórico de capturas, miniaturas em cache,
+ações de copiar e abrir, limpeza diária da lista e modo anônimo.
 
-- Painel recolhível na lateral (ex.: `Adw.OverlaySplitView`, libadwaita 1.4+),
-  com miniaturas, data e hora, ordenado da mais nova para a mais antiga.
-- Ações por item: abrir numa aba nova, copiar, abrir a pasta, remover da lista.
-- Registro em JSON no diretório de dados do app (`GLib.get_user_data_dir()`,
-  que no Flatpak é `~/.var/app/io.github.kassiobraga.Capture/data`); miniaturas
-  em cache (`GLib.get_user_cache_dir()`). Entradas cujo arquivo sumiu
-  desaparecem da lista.
-- Configuração de retenção: **manter o histórico** (padrão) ou **limpar a lista
-  todo dia** (só a lista; os arquivos ficam, decisão do Kassio).
-- **Modo anônimo**: a captura não entra no histórico. Confirmar com o Kassio se
-  também não deve ser salva automaticamente em disco (ficaria só na área de
-  transferência e na aba); a frase original foi "captura anônima, onde ele não
-  salva no histórico".
-- Preferências persistidas com `Gio.Settings` exige schema compilado; um JSON
-  simples no diretório de configuração é mais fácil de empacotar.
+### 1.3: Gravação de tela (concluída)
 
-### 1.3: Gravação de tela
+Gravação de tela em MP4 e GIF via FFmpeg para região, janela ou tela inteira,
+com contador de tempo e botão de parar fora da área gravada.
 
-- Gravar região, janela ou tela inteira, reaproveitando a seleção de `overlay.py`.
-- Exportar MP4 e GIF. Codificadores precisam ir dentro do Flatpak: opções são
-  GStreamer (`ximagesrc`, já no runtime GNOME) com o encoder certo, ou a
-  extensão `org.freedesktop.Platform.ffmpeg-full` declarada no manifesto. MP4
-  H.264 depende de codec que não vem no runtime base; verificar a licença e a
-  extensão antes de escolher. GIF: gerar paleta (ffmpeg `palettegen` ou similar).
-- Interface: botão de parar visível (fora da área gravada), contador de tempo,
-  opção de áudio do sistema/microfone ficaria para depois.
+Nota de empacotamento: a gravação em MP4 e GIF usa o ffmpeg que já vem no runtime GNOME 49,
+com H.264 provido pelo codecs-extra (ver comentário em flatpak/io.github.kassiobraga.Capture.yml,
+que confere 'ffmpeg -version' no build); por isso não foi preciso a extensão
+org.freedesktop.Platform.ffmpeg-full nem GStreamer; o GIF é gerado com palettegen/paletteuse
+(capture/gravar.py); áudio do sistema ou microfone ficou fora do escopo, possível melhoria futura.
 
-### Depois: Wayland
+### 1.4: Captura rolável (concluída)
 
-Captura pelo `org.freedesktop.portal.Screenshot`/`ScreenCast`, sem a seleção
-própria por cima das janelas (o portal mostra a dele). Permite retirar
-`--socket=x11` do Flatpak quando a sessão for Wayland.
+Captura de páginas e janelas compridas com rolagem automática via XTest
+e emenda de quadros por comparação de pixels, com cabeçalho e rodapé fixos.
+
+### Próximo: Wayland
+
+A migração para Wayland utilizará o portal `org.freedesktop.portal.Screenshot` para capturas
+de tela e o portal `org.freedesktop.portal.ScreenCast` para gravação de vídeo.
+A integração com a área de transferência passará a utilizar a API nativa do `Gdk.Clipboard`.
+Com o modelo de segurança do Wayland, recursos que dependem de acesso global ao servidor X11
+não são possíveis, como overlay próprio de seleção, modo de forma livre e captura rolável automática.
+O manifesto do Flatpak deve ser configurado com `--socket=wayland` e `--socket=fallback-x11`
+para garantir a compatibilidade e a transição transparente entre os dois ambientes gráficos.
 
 ---
 

@@ -236,7 +236,7 @@ As imagens desta página foram geradas por `docs/gerar_captura.py`.
 ## Estrutura
 
 ```
-capture/      pacote Python (app, overlay, editor, gravar, historico, icons, x11, arquivos)
+capture/      pacote Python (app, overlay, editor, gravar, historico, icons, x11, arquivos, costura, rolagem)
 data/         ícone SVG, modelo do .desktop e metainfo (AppStream)
 flatpak/      manifesto do pacote Flatpak
 docs/         imagens do README e o script que as gera

@@ -12,7 +12,7 @@
   <description>
     <p>Press Print, select what you want, and the image is already copied and saved. If you want, mark it up before pasting it somewhere else.</p>
     <ul>
-      <li>Four capture modes: rectangle, window, full screen and free form</li>
+      <li>Five capture modes: rectangle, window, full screen, free form and scrolling</li>
       <li>Optional 3, 5 or 10 second delay</li>
       <li>Works with multiple monitors</li>
       <li>Editor with pen, highlighter, eraser, shapes, arrows, text and crop</li>
@@ -27,7 +27,7 @@
     <p>Capture requires an X11 session.</p>
     <p xml:lang="pt_BR">Aperte Print, selecione o que quer, e a imagem já fica copiada e salva. Se quiser, marque por cima antes de colar em outro lugar.</p>
     <ul>
-      <li xml:lang="pt_BR">Quatro modos de captura: retângulo, janela, tela cheia e forma livre</li>
+      <li xml:lang="pt_BR">Cinco modos de captura: retângulo, janela, tela cheia, forma livre e rolável</li>
       <li xml:lang="pt_BR">Atraso opcional de 3, 5 ou 10 segundos</li>
       <li xml:lang="pt_BR">Funciona com mais de um monitor</li>
       <li xml:lang="pt_BR">Editor com caneta, marca-texto, borracha, formas, setas, texto e corte</li>
