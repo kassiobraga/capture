@@ -3,7 +3,7 @@
 Documento para quem vai continuar o desenvolvimento (pessoa ou agente de IA).
 Descreve o que o Capture é, como o código está organizado, como se testa e se
 publica, o que já foi decidido e o que falta fazer. Estado em 19/11/2026,
-versão **1.4.1**.
+versão **1.4.2**.
 
 - Repositório: <https://github.com/kassiobraga/capture> (público, licença MIT)
 - Página de instalação: <https://kassiobraga.github.io/capture/>
@@ -19,7 +19,7 @@ libadwaita. Fluxo principal: a pessoa aperta Print, seleciona uma área, e a
 imagem já sai copiada para a área de transferência e salva em PNG. Se quiser,
 anota por cima no editor antes de colar em outro lugar.
 
-### Recursos atuais (1.4.1)
+### Recursos atuais (1.4.2)
 
 - Modos de captura: retângulo, janela, tela cheia, forma livre e rolável; atraso opcional
   de 3, 5 ou 10 s; seleção em vários monitores ao mesmo tempo.
@@ -227,6 +227,10 @@ CAPTURE_E2E=1 python3 -m unittest discover -s tests/e2e -t .
   regressão.
 - Regra: toda funcionalidade nova ganha teste unitário no `Modelo`/módulos sem
   GTK e, quando mexe na interface, um e2e em `tests/e2e/`.
+- Regra de lançamento: antes de criar a tag, abra o app de verdade (num X real ou num Xvfb com
+  `openbox`) e clique em Capturar, no modo rolável e em REC > MP4, confirmando que a seleção abre.
+  Os e2e ficam pulados sem display e não pegaram o `KeyError: 'rolavel'` da 1.4.0 e da 1.4.1
+  (corrigido na 1.4.2); o teste `tests/test_overlay_modos.py` cobre essa tabela de ícones.
 
 ---
 

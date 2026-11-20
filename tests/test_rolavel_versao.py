@@ -1,4 +1,4 @@
-"""Fase 5 (congelado): versao 1.4.1, metainfo, README, pagina e documento de passagem."""
+"""Fase 5 (congelado): versao 1.4.2, metainfo, README, pagina e documento de passagem."""
 import os
 import re
 import sys
@@ -19,12 +19,13 @@ def fonte(rel):
 
 class Versao(unittest.TestCase):
     def test_versao_do_pacote(self):
-        self.assertEqual(capture.__version__, "1.4.1")
+        self.assertEqual(capture.__version__, "1.4.2")
 
-    def test_metainfo_valido_com_a_1_4_1_no_topo(self):
+    def test_metainfo_valido_com_a_1_4_2_no_topo(self):
         raiz = ET.fromstring(fonte("data/io.github.kassiobraga.Capture.metainfo.xml"))
         versoes = [r.get("version") for r in raiz.find("releases").findall("release")]
-        self.assertEqual(versoes[0], "1.4.1")
+        self.assertEqual(versoes[0], "1.4.2")
+        self.assertIn("1.4.1", versoes)
         self.assertIn("1.3.0", versoes)
         topo = raiz.find("releases").findall("release")[0]
         self.assertRegex(topo.get("date"), r"^\d{4}-\d{2}-\d{2}$")
@@ -44,7 +45,7 @@ class Versao(unittest.TestCase):
 
     def test_documento_de_passagem_atualizado(self):
         h = fonte("docs/HANDOFF.md")
-        self.assertIn("1.4.1", h)
+        self.assertIn("1.4.2", h)
 
     def test_sem_travessao_nos_textos(self):
         for rel in ("README.md", "flatpak/site/index.html", "docs/HANDOFF.md",
