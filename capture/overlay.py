@@ -86,6 +86,9 @@ def caixa_selecao(modo, ini, fim, caminho, gw, gh):
 
 
 MODOS_GRAVAR = [("ret", "Retângulo"), ("janela", "Janela"), ("tela", "Tela cheia")]
+# Modos da selecao de captura imediata: a rolavel nao entra aqui, ela abre a sessao so com area.
+MODOS_CAPTURA = [m for m in MODOS if m[0] != "rolavel"]
+ICONES_MODO = {"ret": "ret", "janela": "janela", "tela": "tela", "livre": "livre", "rolavel": "rolavel"}
 DICAS = {"ret": "Arraste para selecionar  ·  Esc cancela",
          "janela": "Clique em uma janela  ·  Esc cancela",
          "livre": "Desenhe em volta da área  ·  Esc cancela"}
@@ -143,8 +146,8 @@ class Sobreposicao(Gtk.Window):
         self.dica.set_can_target(False)   # decorativa: o arraste ou clique que comeca embaixo dela vale
         self.bts = {}
         grupo = None
-        for cod, nome in (MODOS_GRAVAR if sessao.apenas_area else MODOS):
-            b = botao({"ret": "ret", "janela": "janela", "tela": "tela", "livre": "livre"}[cod], nome, alternar=True)
+        for cod, nome in (MODOS_GRAVAR if sessao.apenas_area else MODOS_CAPTURA):
+            b = botao(ICONES_MODO[cod], nome, alternar=True)
             if grupo:
                 b.set_group(grupo)
             grupo = grupo or b
