@@ -12,8 +12,10 @@ import cairo
 
 FORMATOS_GRAVACAO = [("mp4", "MP4"), ("gif", "GIF")]
 FPS_PADRAO = {"mp4": 24, "gif": 12}
+FONTE_AUDIO_PADRAO = "default"
 
 _CACHE_ENCODERS = {}
+_CACHE_DISPOSITIVOS = {}
 
 
 def tem_ffmpeg(binario="ffmpeg"):
@@ -110,19 +112,24 @@ def posicionar_barra(area, monitores, barra_w, barra_h, margem=14):
     return prende(mx + mw - bw - 20, mx, mx + mw - bw), prende(my + mh - bh - 48, my, my + mh - bh)
 
 
-def _encoders_disponiveis(saida_encoders=None, binario="ffmpeg"):
+def _saida_encoders(binario="ffmpeg"):
+    if binario not in _CACHE_ENCODERS:
+        try:
+            r = subprocess.run([binario, "-hide_banner", "-encoders"],
+                               capture_output=True, text=True, timeout=6)
+            _CACHE_ENCODERS[binario] = r.stdout or ""
+        except Exception:
+            _CACHE_ENCODERS[binario] = ""
+    return _CACHE_ENCODERS[binario]
+
+
+def _encoders_disponiveis(saida_encoders=None, binario="ffmpeg", tipo="V"):
     if saida_encoders is None:
-        if binario not in _CACHE_ENCODERS:
-            try:
-                r = subprocess.run([binario, "-hide_banner", "-encoders"],
-                                   capture_output=True, text=True, timeout=6)
-                _CACHE_ENCODERS[binario] = r.stdout or ""
-            except Exception:
-                _CACHE_ENCODERS[binario] = ""
-        saida_encoders = _CACHE_ENCODERS[binario]
+        saida_encoders = _saida_encoders(binario=binario)
+    padrao = r"^\s*%s[\.A-Z]{5}\s+([A-Za-z0-9_\-]+)" % re.escape(tipo)
     nomes = set()
     for ln in saida_encoders.splitlines():
-        m = re.match(r"^\s*V[\.A-Z]{5}\s+([A-Za-z0-9_\-]+)", ln)
+        m = re.match(padrao, ln)
         if m:
             nomes.add(m.group(1))
     return nomes
@@ -130,7 +137,7 @@ def _encoders_disponiveis(saida_encoders=None, binario="ffmpeg"):
 
 def escolher_encoder_mp4(saida_encoders=None, binario="ffmpeg"):
     """Devolve (nome, argumentos_ffmpeg) para gravar MP4 compativel."""
-    disp = _encoders_disponiveis(saida_encoders, binario=binario)
+    disp = _encoders_disponiveis(saida_encoders, binario=binario, tipo="V")
     if "libx264" in disp:
         return ("libx264", ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
                             "-pix_fmt", "yuv420p", "-movflags", "+faststart"])
@@ -141,9 +148,38 @@ def escolher_encoder_mp4(saida_encoders=None, binario="ffmpeg"):
                       "-movflags", "+faststart"])
 
 
+def escolher_encoder_audio(saida_encoders=None, binario="ffmpeg"):
+    """Devolve (nome, argumentos_ffmpeg) para a trilha de voz do MP4."""
+    disp = _encoders_disponiveis(saida_encoders, binario=binario, tipo="A")
+    if "aac" in disp:
+        return ("aac", ["-c:a", "aac", "-b:a", "128k"])
+    if "libopus" in disp:
+        return ("libopus", ["-c:a", "libopus", "-b:a", "96k"])
+    if "libmp3lame" in disp:
+        return ("libmp3lame", ["-c:a", "libmp3lame", "-b:a", "128k"])
+    return ("aac", ["-c:a", "aac", "-b:a", "128k"])
+
+
+def tem_entrada_pulse(saida_dispositivos=None, binario="ffmpeg"):
+    """True se o FFmpeg tem o demuxer de entrada 'pulse' (PulseAudio / PipeWire)."""
+    if saida_dispositivos is None:
+        if binario not in _CACHE_DISPOSITIVOS:
+            try:
+                r = subprocess.run([binario, "-hide_banner", "-devices"],
+                                   capture_output=True, text=True, timeout=6)
+                _CACHE_DISPOSITIVOS[binario] = r.stdout or ""
+            except Exception:
+                _CACHE_DISPOSITIVOS[binario] = ""
+        saida_dispositivos = _CACHE_DISPOSITIVOS[binario]
+    for ln in saida_dispositivos.splitlines():
+        if re.match(r"^\s*D[E\.]\s+pulse\b", ln):
+            return True
+    return False
+
+
 def escolher_encoder_temp_gif(saida_encoders=None, binario="ffmpeg"):
     """Devolve (extensao, argumentos_ffmpeg) sem perda para o arquivo temporario do GIF."""
-    disp = _encoders_disponiveis(saida_encoders, binario=binario)
+    disp = _encoders_disponiveis(saida_encoders, binario=binario, tipo="V")
     if "qtrle" in disp:
         return (".mov", ["-c:v", "qtrle", "-pix_fmt", "rgb24"])
     if "ffv1" in disp:
@@ -182,10 +218,11 @@ def extrair_quadro_cairo(caminho, binario="ffmpeg"):
 
 
 class Gravador:
-    """Captura quadros BGR0 num compasso fixo e grava MP4 ou GIF via FFmpeg."""
+    """Captura quadros BGR0 num compasso fixo e grava MP4 (com ou sem voz) ou GIF via FFmpeg."""
 
     def __init__(self, largura, altura, destino, formato="mp4", fps=None,
-                 fonte_quadros=None, para_superficie=None, binario="ffmpeg"):
+                 fonte_quadros=None, para_superficie=None, binario="ffmpeg",
+                 audio=False, fonte_audio=FONTE_AUDIO_PADRAO, env=None):
         fmt = (formato or "mp4").lower()
         if fmt not in dict(FORMATOS_GRAVACAO):
             raise ValueError("formato de gravacao desconhecido: %s" % formato)
@@ -199,6 +236,12 @@ class Gravador:
         self.fonte_quadros = fonte_quadros
         self._para_sup = para_superficie or (lambda b: _bgr0_para_cairo(b, self.largura, self.altura))
         self.binario = binario
+        self.env = env
+
+        self.audio_solicitado = bool(audio) and fmt == "mp4"
+        self.fonte_audio = str(fonte_audio or FONTE_AUDIO_PADRAO)
+        self.audio_ativo = False
+        self.aviso_audio = None
 
         self.primeiro_quadro_img = None
         self._ultimo_quadro = None
@@ -212,6 +255,79 @@ class Gravador:
         self._pasta_tmp = None
         self._arq_captura = None
         self._encerrado = False
+
+    def _montar_cmd(self, usar_audio=False):
+        if self.formato == "mp4":
+            _, args_enc = escolher_encoder_mp4(binario=self.binario)
+            self._arq_captura = os.path.join(self._pasta_tmp, "saida.mp4")
+            if usar_audio:
+                _, args_aud = escolher_encoder_audio(binario=self.binario)
+                return [
+                    self.binario, "-y", "-hide_banner", "-loglevel", "error",
+                    "-thread_queue_size", "512",
+                    "-f", "rawvideo", "-pix_fmt", "bgr0",
+                    "-s", "%dx%d" % (self.largura, self.altura),
+                    "-r", str(self.fps), "-i", "-",
+                    "-thread_queue_size", "512",
+                    "-f", "pulse", "-i", self.fonte_audio,
+                    "-map", "0:v:0", "-map", "1:a:0",
+                    "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+                    *args_enc, *args_aud, "-shortest", self._arq_captura,
+                ]
+            return [
+                self.binario, "-y", "-hide_banner", "-loglevel", "error",
+                "-f", "rawvideo", "-pix_fmt", "bgr0",
+                "-s", "%dx%d" % (self.largura, self.altura),
+                "-r", str(self.fps), "-i", "-",
+                "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+                *args_enc, self._arq_captura,
+            ]
+        ext_tmp, args_enc = escolher_encoder_temp_gif(binario=self.binario)
+        self._arq_captura = os.path.join(self._pasta_tmp, "bruto" + ext_tmp)
+        return [
+            self.binario, "-y", "-hide_banner", "-loglevel", "error",
+            "-f", "rawvideo", "-pix_fmt", "bgr0",
+            "-s", "%dx%d" % (self.largura, self.altura),
+            "-r", str(self.fps), "-i", "-",
+            *args_enc, self._arq_captura,
+        ]
+
+    @staticmethod
+    def _fecha_proc_morto(proc):
+        for p in (proc.stdin, proc.stderr):
+            if p is not None:
+                try:
+                    p.close()
+                except Exception:
+                    pass
+        try:
+            proc.wait(timeout=2)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def _iniciar_ffmpeg(self, primeiro, usar_audio):
+        cmd = self._montar_cmd(usar_audio=usar_audio)
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.PIPE, env=self.env)
+        t0 = time.monotonic()
+        try:
+            proc.stdin.write(primeiro)
+            proc.stdin.flush()
+        except BrokenPipeError:
+            self._fecha_proc_morto(proc)
+            return None, None
+        if usar_audio:
+            # Se o servidor de audio nao estiver acessivel ou nao houver microfone,
+            # o FFmpeg encerra nos primeiros ~80 ms ao abrir a entrada pulse.
+            for _ in range(18):
+                if proc.poll() is not None:
+                    self._fecha_proc_morto(proc)
+                    return None, None
+                time.sleep(0.01)
+        return proc, t0
 
     def iniciar(self):
         """Captura o primeiro quadro, abre o FFmpeg e inicia a thread de gravacao."""
@@ -231,34 +347,35 @@ class Gravador:
             self.primeiro_quadro_img = None
 
         self._pasta_tmp = tempfile.mkdtemp(prefix="capture-grav-")
-        if self.formato == "mp4":
-            _, args_enc = escolher_encoder_mp4(binario=self.binario)
-            self._arq_captura = os.path.join(self._pasta_tmp, "saida.mp4")
-            cmd = [
-                self.binario, "-y", "-hide_banner", "-loglevel", "error",
-                "-f", "rawvideo", "-pix_fmt", "bgr0",
-                "-s", "%dx%d" % (self.largura, self.altura),
-                "-r", str(self.fps), "-i", "-",
-                "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-                *args_enc, self._arq_captura,
-            ]
-        else:
-            ext_tmp, args_enc = escolher_encoder_temp_gif(binario=self.binario)
-            self._arq_captura = os.path.join(self._pasta_tmp, "bruto" + ext_tmp)
-            cmd = [
-                self.binario, "-y", "-hide_banner", "-loglevel", "error",
-                "-f", "rawvideo", "-pix_fmt", "bgr0",
-                "-s", "%dx%d" % (self.largura, self.altura),
-                "-r", str(self.fps), "-i", "-",
-                *args_enc, self._arq_captura,
-            ]
-
         try:
-            self._proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                          stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            self._proc.stdin.write(primeiro)
+            tentar_audio = False
+            if self.audio_solicitado:
+                if tem_entrada_pulse(binario=self.binario):
+                    tentar_audio = True
+                else:
+                    self.aviso_audio = "Suporte a áudio indisponível no FFmpeg: gravando sem som"
+
+            proc, t0 = (None, None)
+            if tentar_audio:
+                proc, t0 = self._iniciar_ffmpeg(primeiro, usar_audio=True)
+                if proc is not None:
+                    self.audio_ativo = True
+                else:
+                    self.aviso_audio = "Microfone indisponível: gravando sem áudio"
+                    if self._arq_captura and os.path.exists(self._arq_captura):
+                        try:
+                            os.unlink(self._arq_captura)
+                        except OSError:
+                            pass
+
+            if proc is None:
+                proc, t0 = self._iniciar_ffmpeg(primeiro, usar_audio=False)
+                if proc is None:
+                    raise RuntimeError("Não foi possível iniciar o processo do FFmpeg.")
+
+            self._proc = proc
             self._quadros = 1
-            self._inicio = time.monotonic()
+            self._inicio = t0
         except Exception:
             self._limpa_tmp()
             raise
@@ -370,6 +487,8 @@ class Gravador:
                 "largura": self.largura,
                 "altura": self.altura,
                 "miniatura_img": self.primeiro_quadro_img,
+                "audio": self.audio_ativo,
+                "aviso_audio": self.aviso_audio,
             }
         finally:
             self._limpa_tmp()

@@ -1,11 +1,15 @@
 """Capture: captura de tela e anotacao para Linux (X11), em GTK 4 / libadwaita."""
 
-__version__ = "1.4.2"
+__version__ = "1.5.0"
 
 APP_ID = "io.github.kassiobraga.Capture"
 ICONE = APP_ID  # nome do icone no tema
 NOME = "Capture"
 PRGNAME = "capture"
+AUTOR = "Kassio Braga"
+SITE_AUTOR = "https://kassiobraga.com.br"
+URL_REPO = "https://github.com/kassiobraga/capture"
+URL_PROBLEMAS = "https://github.com/kassiobraga/capture/issues"
 MODOS = [("ret", "Retângulo"), ("janela", "Janela"), ("tela", "Tela cheia"), ("livre", "Forma livre"),
          ("rolavel", "Rolável")]
 ATRASOS = [(0, "Sem atraso"), (3, "3 segundos"), (5, "5 segundos"), (10, "10 segundos")]

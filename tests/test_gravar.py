@@ -2,6 +2,8 @@
 import datetime
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -16,18 +18,21 @@ from gi.repository import Gdk  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
+from capture import AUTOR, SITE_AUTOR, __version__  # noqa: E402
 from capture.app import Janela  # noqa: E402
 from capture.arquivos import nome_gravacao  # noqa: E402
 from capture.gravar import (  # noqa: E402
     Gravador,
+    escolher_encoder_audio,
     escolher_encoder_mp4,
     extrair_quadro_cairo,
     formatar_duracao,
     posicionar_barra,
+    tem_entrada_pulse,
     tem_ffmpeg,
 )
 from capture.historico import Registro  # noqa: E402
-from capture.icons import ic_gravar  # noqa: E402
+from capture.icons import ICONES, ic_gravar  # noqa: E402
 
 
 def _intercepta(a, b):
@@ -181,9 +186,95 @@ class GravacaoUnitaria(unittest.TestCase):
         self.assertIsNone(g.parar(cancelar=True))
         self.assertFalse(os.path.exists(destino))
 
+    def test_escolher_encoder_audio_e_deteccao_pulse(self):
+        saida_aac = " A....D aac                  AAC\n A....D libopus              Opus\n"
+        self.assertEqual(escolher_encoder_audio(saida_aac)[0], "aac")
+        saida_opus = " A....D libopus              Opus\n"
+        self.assertEqual(escolher_encoder_audio(saida_opus)[0], "libopus")
+        saida_mp3 = " A....D libmp3lame           MP3\n"
+        self.assertEqual(escolher_encoder_audio(saida_mp3)[0], "libmp3lame")
+
+        devs_com_pulse = " DE pulse           PulseAudio sound server\n D  x11grab         X11 screen capture\n"
+        self.assertTrue(tem_entrada_pulse(devs_com_pulse))
+        devs_sem_pulse = " D  x11grab         X11 screen capture\n"
+        self.assertFalse(tem_entrada_pulse(devs_sem_pulse))
+
+    @unittest.skipUnless(tem_ffmpeg(), "sem ffmpeg instalado")
+    def test_gravar_mp4_com_audio_indisponivel_cai_para_sem_som(self):
+        w, h = 96, 64
+        quadro = bytes([40, 120, 200, 0]) * (w * h)
+        destino = os.path.join(self.tmp.name, "fallback_sem_som.mp4")
+        g = Gravador(w, h, destino, formato="mp4", fps=10,
+                     fonte_quadros=lambda: quadro,
+                     audio=True, fonte_audio="fonte_pulse_inexistente_capture_test")
+        g.iniciar()
+        self.assertFalse(g.audio_ativo)
+        self.assertTrue(bool(g.aviso_audio))
+        time.sleep(0.2)
+        info = g.parar()
+        self.assertIsNotNone(info)
+        self.assertFalse(info["audio"])
+        self.assertTrue(os.path.isfile(destino))
+        self.assertGreater(os.path.getsize(destino), 200)
+
+    @unittest.skipUnless(
+        tem_ffmpeg() and tem_entrada_pulse() and shutil.which("pulseaudio") and shutil.which("ffprobe"),
+        "sem ffmpeg+pulse, pulseaudio ou ffprobe",
+    )
+    def test_gravar_mp4_com_audio_pulse_gera_trilha_aac(self):
+        pa_dir = os.path.join(self.tmp.name, "pa")
+        os.makedirs(pa_dir, mode=0o700)
+        soquete = os.path.join(pa_dir, "native")
+        env = dict(os.environ, PULSE_RUNTIME_PATH=pa_dir, PULSE_SERVER="unix:" + soquete, HOME=self.tmp.name)
+        cmd_pa = [
+            "pulseaudio", "--daemonize=no", "--exit-idle-time=-1", "-n", "--use-pid-file=false",
+            "-L", "module-native-protocol-unix auth-anonymous=1 socket=" + soquete,
+            "-L", "module-null-sink sink_name=cap_sink",
+        ]
+        if shutil.which("dbus-run-session"):
+            cmd_pa = ["dbus-run-session", "--"] + cmd_pa
+        pa = subprocess.Popen(cmd_pa, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        self.addCleanup(lambda: (pa.terminate(), pa.wait(timeout=3)) if pa.poll() is None else None)
+        for _ in range(30):
+            if os.path.exists(soquete) or pa.poll() is not None:
+                break
+            time.sleep(0.03)
+        if not os.path.exists(soquete):
+            self.skipTest("servidor PulseAudio de teste nao abriu soquete")
+
+        w, h = 96, 64
+        quadro = bytes([20, 180, 40, 0]) * (w * h)
+        destino = os.path.join(self.tmp.name, "com_voz.mp4")
+        g = Gravador(w, h, destino, formato="mp4", fps=12,
+                     fonte_quadros=lambda: quadro, audio=True, fonte_audio="default", env=env)
+        g.iniciar()
+        self.assertTrue(g.audio_ativo)
+        self.assertIsNone(g.aviso_audio)
+        time.sleep(0.35)
+        info = g.parar()
+        self.assertIsNotNone(info)
+        self.assertTrue(info["audio"])
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", destino],
+            capture_output=True, text=True, timeout=10,
+        )
+        tipos = set(probe.stdout.split())
+        self.assertIn("video", tipos)
+        self.assertIn("audio", tipos)
+
+    def test_preferencia_audio_gravacao_padrao_ativo_e_persiste(self):
+        d = os.path.join(self.tmp.name, "d")
+        c = os.path.join(self.tmp.name, "c")
+        cfg = os.path.join(self.tmp.name, "cfg")
+        reg = Registro(d, c, cfg)
+        self.assertTrue(reg.audio_gravacao)
+        reg.definir_audio_gravacao(False)
+        reg2 = Registro(d, c, cfg)
+        self.assertFalse(reg2.audio_gravacao)
+
 
 class InterfaceGravacao(unittest.TestCase):
-    """Testes do botao discreto de gravacao e do popover de formatos."""
+    """Testes do botao discreto de gravacao, microfone, popover e assinatura."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -201,6 +292,16 @@ class InterfaceGravacao(unittest.TestCase):
         b, g, r, a = data[idx:idx + 4]
         self.assertEqual((r, g, b, a), (239, 68, 68, 255))
 
+    def test_icones_microfone_e_sobre_desenham_sem_erro(self):
+        for nome in ("microfone", "microfone_mudo", "sobre"):
+            self.assertIn(nome, ICONES)
+            surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 16, 16)
+            cr = cairo.Context(surf)
+            cr.set_source_rgba(1, 1, 1, 1)
+            cr.set_line_width(1.6)
+            ICONES[nome](cr)
+            self.assertTrue(any(surf.get_data()), nome)
+
     def test_formato_grav_escolhido_atualiza_preferencia_fecha_popover_e_inicia(self):
         reg = Registro(self.tmp.name, self.tmp.name, self.tmp.name)
         jan = MagicMock()
@@ -217,6 +318,17 @@ class InterfaceGravacao(unittest.TestCase):
         btn.set_active.assert_called_with(True)
         jan.pop_gravar.popdown.assert_called_once()
         jan.nova_gravacao.assert_called_once_with(formato="gif")
+
+    def test_define_audio_gravacao_sincroniza_checkbutton(self):
+        reg = Registro(self.tmp.name, self.tmp.name, self.tmp.name)
+        jan = MagicMock()
+        jan.hist = reg
+        jan.b_audio_grav = MagicMock()
+        jan._sinc_audio_grav = False
+
+        Janela._define_audio_gravacao(jan, False)
+        self.assertFalse(jan.hist.audio_gravacao)
+        jan.b_audio_grav.set_active.assert_called_with(False)
 
     def test_define_formato_gravacao_sem_lb_formato(self):
         reg = Registro(self.tmp.name, self.tmp.name, self.tmp.name)
@@ -248,7 +360,11 @@ class InterfaceGravacao(unittest.TestCase):
         self.assertTrue(res)
         jan.parar_gravacao.assert_called_once()
 
-    def test_estrutura_codigo_cabecalho_e_css(self):
+    def test_metadados_autoria_e_estrutura_codigo(self):
+        self.assertEqual(AUTOR, "Kassio Braga")
+        self.assertEqual(SITE_AUTOR, "https://kassiobraga.com.br")
+        self.assertEqual(__version__, "1.5.0")
+
         raiz = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
         with open(os.path.join(raiz, "capture", "app.py"), encoding="utf-8") as f:
             conteudo = f.read()
@@ -262,9 +378,15 @@ class InterfaceGravacao(unittest.TestCase):
         self.assertIn("Gtk.Separator(orientation=Gtk.Orientation.VERTICAL", conteudo)
         self.assertIn('botao("gravar", "Gravar a tela (Ctrl+G)", plano=False)', conteudo)
 
-        # opcoes do popover com rotulos corretos
+        # opcoes do popover com rotulos corretos e microfone
         self.assertIn('"Vídeo MP4"', conteudo)
         self.assertIn('"Animação GIF"', conteudo)
+        self.assertIn('"Gravar microfone"', conteudo)
+
+        # assinatura de autoria e janela Sobre
+        self.assertIn("def mostrar_sobre", conteudo)
+        self.assertIn("kassiobraga.com.br", conteudo)
+        self.assertIn("Adw.AboutWindow", conteudo)
 
         # estilo CSS com hover vermelho suave
         self.assertIn("button.gravar:hover", conteudo)

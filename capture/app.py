@@ -17,7 +17,8 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from . import APP_ID, ATRASOS, CORES, ICONE, MODOS, NOME, PRGNAME
+from . import (APP_ID, ATRASOS, AUTOR, CORES, ICONE, MODOS, NOME, PRGNAME,
+               SITE_AUTOR, URL_PROBLEMAS, URL_REPO, __version__)
 from .arquivos import nome_captura, nome_gravacao, nome_livre, pasta_capturas, pasta_para_exibir
 from . import exportar
 from .editor import Editor, cores_padrao, espessuras_padrao, proporcional
@@ -132,6 +133,12 @@ tabbar tab button:hover, tabbar tab button.close:hover { background: alpha(@cap_
 .tempo-grav { font-weight: 700; font-size: 0.95em; font-variant-numeric: tabular-nums; padding: 0 2px; }
 .fmt-grav { font-size: 0.75em; font-weight: 700; padding: 2px 6px; border-radius: 6px;
             background: alpha(@cap_text, 0.08); color: alpha(@cap_text, 0.80); }
+.mic-grav { padding: 3px 5px; border-radius: 6px;
+            background: alpha(@cap_accent, 0.16); color: @cap_accent; }
+.mic-grav.mudo { background: alpha(@cap_text, 0.08); color: alpha(@cap_text, 0.55); }
+.assinatura { font-size: 0.84em; padding: 5px 12px; border-radius: 999px;
+              color: alpha(@cap_text, 0.62); }
+.assinatura:hover { background: alpha(@cap_text, 0.07); color: @cap_text; }
 button.parar-grav { background: #EF4444; color: #FFFFFF; border-radius: 8px; font-weight: 700;
                     min-height: 28px; padding: 0 10px; border: none; box-shadow: none; }
 button.parar-grav:hover { background: #DC2626; }
@@ -196,13 +203,15 @@ def decodifica_caminho(v):
 
 
 class BarraGravacao(Gtk.Window):
-    """Barra compacta com contador e botao Parar, posicionada fora da area gravada."""
+    """Barra compacta com contador, indicador de microfone e botao Parar, fora da area gravada."""
 
-    def __init__(self, jan, area_px, formato):
+    def __init__(self, jan, area_px, formato, audio=False):
         super().__init__(application=jan.get_application(), title="Gravando: " + NOME,
                          decorated=False, resizable=False)
         self.jan = jan
         self.area_px = tuple(area_px)
+        self.formato = (formato or "mp4").lower()
+        self.audio_ativo = bool(audio) and self.formato == "mp4"
         self.pos_x11 = (0, 0)
 
         caixa = Gtk.Box(spacing=8, valign=Gtk.Align.CENTER)
@@ -216,9 +225,17 @@ class BarraGravacao(Gtk.Window):
         self.lb_tempo.add_css_class("tempo-grav")
         caixa.append(self.lb_tempo)
 
-        self.lb_fmt = Gtk.Label(label=(formato or "mp4").upper(), valign=Gtk.Align.CENTER)
+        self.lb_fmt = Gtk.Label(label=self.formato.upper(), valign=Gtk.Align.CENTER)
         self.lb_fmt.add_css_class("fmt-grav")
         caixa.append(self.lb_fmt)
+
+        self.cx_mic = Gtk.Box(valign=Gtk.Align.CENTER)
+        self.cx_mic.add_css_class("mic-grav")
+        self.ic_mic = Icone("microfone", 13)
+        self.cx_mic.append(self.ic_mic)
+        self.cx_mic.set_visible(self.formato == "mp4")
+        caixa.append(self.cx_mic)
+        self.definir_audio(self.audio_ativo)
 
         self.lb_parar = Gtk.Label(label="Parar")
         cx_p = Gtk.Box(spacing=6)
@@ -234,6 +251,17 @@ class BarraGravacao(Gtk.Window):
         tec.connect("key-pressed", self._tecla)
         self.add_controller(tec)
         self.connect("close-request", self._fechando)
+
+    def definir_audio(self, ativo):
+        self.audio_ativo = bool(ativo) and self.formato == "mp4"
+        self.ic_mic.nome = "microfone" if self.audio_ativo else "microfone_mudo"
+        self.ic_mic.queue_draw()
+        if self.audio_ativo:
+            self.cx_mic.remove_css_class("mudo")
+            self.cx_mic.set_tooltip_text("Gravando voz do microfone")
+        else:
+            self.cx_mic.add_css_class("mudo")
+            self.cx_mic.set_tooltip_text("Gravando sem áudio")
 
     def _tecla(self, _c, tecla, *_):
         if tecla == Gdk.KEY_Escape:
@@ -259,7 +287,9 @@ class BarraGravacao(Gtk.Window):
             mons.append((g.x * esc, g.y * esc, g.width * esc, g.height * esc))
         surf = self.get_surface()
         esc = surf.get_scale_factor() if surf is not None else esc_padrao
-        bw = max(210, self.get_width() * esc) if self.get_width() > 20 else 236 * esc
+        larg_min = 238 if self.formato == "mp4" else 210
+        larg_est = 262 if self.formato == "mp4" else 236
+        bw = max(larg_min, self.get_width() * esc) if self.get_width() > 20 else larg_est * esc
         bh = max(40, self.get_height() * esc) if self.get_height() > 10 else 46 * esc
         bx, by = posicionar_barra(self.area_px, mons, bw, bh)
         self.pos_x11 = (bx, by)
@@ -396,6 +426,11 @@ class Janela(Adw.ApplicationWindow):
         self._sinc_anon = False
         self.b_anonimo.connect("toggled", self._anonimo_trocado)
         cab.pack_start(self.b_anonimo)
+        self.b_sobre = botao("sobre", "Sobre o Capture · %s (kassiobraga.com.br)" % AUTOR)
+        self.b_sobre.add_css_class("discreto")
+        self.b_sobre.set_valign(Gtk.Align.CENTER)
+        self.b_sobre.connect("clicked", self.mostrar_sobre)
+        cab.pack_start(self.b_sobre)
 
         centro = Gtk.Box(spacing=10, valign=Gtk.Align.CENTER)
         modos = Gtk.Box(spacing=2, valign=Gtk.Align.CENTER)
@@ -434,6 +469,17 @@ class Janela(Adw.ApplicationWindow):
             self.b_formato[cod_f] = bf
             pop_fmt.append(bf)
         self.b_formato[self.hist.formato_gravacao].set_active(True)
+        pop_fmt.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL, margin_top=3, margin_bottom=3))
+        self.b_audio_grav = Gtk.CheckButton(
+            label="Gravar microfone",
+            active=self.hist.audio_gravacao,
+            tooltip_text="Inclui a voz do microfone nos vídeos MP4",
+            margin_start=4,
+            margin_end=4,
+        )
+        self._sinc_audio_grav = False
+        self.b_audio_grav.connect("toggled", self._audio_grav_trocado)
+        pop_fmt.append(self.b_audio_grav)
         self.pop_gravar = Gtk.Popover(child=pop_fmt)
         self.pop_gravar.set_parent(self.b_gravar)
         self.b_gravar.connect("destroy", lambda *_: self.pop_gravar.unparent())
@@ -605,6 +651,16 @@ class Janela(Adw.ApplicationWindow):
             self.cartoes[cod] = b
             cartoes.append(b)
         vazio.append(cartoes)
+        self.b_assinatura = Gtk.Button(
+            label="Software livre (MIT)  ·  por %s · kassiobraga.com.br" % AUTOR,
+            tooltip_text="Sobre o Capture e portfólio do autor",
+            halign=Gtk.Align.CENTER,
+            margin_top=14,
+        )
+        self.b_assinatura.add_css_class("flat")
+        self.b_assinatura.add_css_class("assinatura")
+        self.b_assinatura.connect("clicked", self.mostrar_sobre)
+        vazio.append(self.b_assinatura)
 
         self.abas = Adw.TabView(vexpand=True)
         self.abas.connect("notify::selected-page", self._aba_trocada)
@@ -679,6 +735,19 @@ class Janela(Adw.ApplicationWindow):
             self.hist.definir_formato_gravacao(cod)
             if hasattr(self, "b_formato") and cod in self.b_formato:
                 self.b_formato[cod].set_active(True)
+
+    def _audio_grav_trocado(self, b):
+        if getattr(self, "_sinc_audio_grav", False):
+            return
+        self.hist.definir_audio_gravacao(b.get_active())
+
+    def _define_audio_gravacao(self, ativo):
+        val = bool(ativo)
+        self.hist.definir_audio_gravacao(val)
+        if hasattr(self, "b_audio_grav"):
+            self._sinc_audio_grav = True
+            self.b_audio_grav.set_active(val)
+            self._sinc_audio_grav = False
 
     # ---- ferramentas
     def _ferr(self, b, cod):
@@ -845,7 +914,7 @@ class Janela(Adw.ApplicationWindow):
         if aviso and resultado.quadros > 1:
             self._status(aviso)
 
-    def nova_gravacao(self, modo=None, formato=None, atraso=None):
+    def nova_gravacao(self, modo=None, formato=None, atraso=None, audio=None):
         if self.barra_grav is not None:
             self.parar_gravacao()
             return
@@ -853,6 +922,8 @@ class Janela(Adw.ApplicationWindow):
             return
         if formato:
             self._define_formato_gravacao(formato)
+        if audio is not None:
+            self._define_audio_gravacao(audio)
         if not tem_ffmpeg():
             self.present()
             self.mostra_erro("O FFmpeg não foi encontrado no sistema para gravar a tela.")
@@ -890,7 +961,9 @@ class Janela(Adw.ApplicationWindow):
                 self.get_application().quit()
             return
         self._finalizando_grav = False
-        self.barra_grav = BarraGravacao(self, area_px, self.hist.formato_gravacao)
+        fmt = self.hist.formato_gravacao
+        usa_audio = (fmt == "mp4" and self.hist.audio_gravacao)
+        self.barra_grav = BarraGravacao(self, area_px, fmt, audio=usa_audio)
         self.barra_grav.present()
         self.barra_grav.posicionar_fora()
         GLib.timeout_add(50, self.barra_grav.posicionar_fora)
@@ -919,6 +992,7 @@ class Janela(Adw.ApplicationWindow):
             return False
         self.barra_grav.posicionar_fora()
         fmt = self.hist.formato_gravacao
+        pedir_audio = (fmt == "mp4" and self.hist.audio_gravacao)
         era_anon = self.hist.anonimo
         pasta_anon = tempfile.mkdtemp(prefix="capture-grav-anon-") if era_anon else None
         destino = nome_gravacao(pasta_anon if era_anon else pasta_capturas(), fmt)
@@ -927,8 +1001,10 @@ class Janela(Adw.ApplicationWindow):
         try:
             cap = x11.CapturadorRegiao(*self.barra_grav.area_px)
             grav = Gravador(cap.w, cap.h, destino, formato=fmt,
-                            fonte_quadros=cap.quadro, para_superficie=cap.para_superficie)
+                            fonte_quadros=cap.quadro, para_superficie=cap.para_superficie,
+                            audio=pedir_audio)
             grav.iniciar()
+            self.barra_grav.definir_audio(grav.audio_ativo)
         except Exception as e:
             if "cap" in locals():
                 cap.fechar()
@@ -1018,12 +1094,16 @@ class Janela(Adw.ApplicationWindow):
             self._salva_gravacao_anonima(info, pasta_anon)
             return False
         self.hist.adicionar(info["caminho"], info["miniatura_img"],
-                            tipo=info["formato"], duracao=info["duracao"])
+                            tipo=info["formato"], duracao=info["duracao"],
+                            audio=info.get("audio"))
         self._atualiza_historico()
         if self.abas.get_n_pages() == 0 and not self.divisao.get_show_sidebar():
             self.b_historico.set_active(True)
         self.present()
-        self._status("Gravação salva em " + pasta_para_exibir(info["caminho"]))
+        partes_msg = ["Gravação salva em " + pasta_para_exibir(info["caminho"])]
+        if info.get("aviso_audio"):
+            partes_msg.append(info["aviso_audio"])
+        self._status(*partes_msg)
         teste.grava_geometria(self)
         return False
 
@@ -1336,6 +1416,8 @@ class Janela(Adw.ApplicationWindow):
         w, h = it.get("largura", 0), it.get("altura", 0)
         if eh_grav:
             partes_sub = [tipo.upper()]
+            if it.get("audio"):
+                partes_sub.append("Voz")
             if it.get("duracao") is not None:
                 partes_sub.append(formatar_duracao(max(1, round(it["duracao"]))))
             if w and h:
@@ -1711,6 +1793,27 @@ class Janela(Adw.ApplicationWindow):
         dlg.connect("response", resposta)
         dlg.present()
 
+    def mostrar_sobre(self, *_):
+        """Abre a janela Sobre com creditos, portfolio do autor, codigo-fonte e licenca MIT."""
+        ab = Adw.AboutWindow(
+            transient_for=self,
+            application_name=NOME,
+            application_icon=ICONE,
+            developer_name=AUTOR,
+            version=__version__,
+            website=SITE_AUTOR,
+            issue_url=URL_PROBLEMAS,
+            license_type=Gtk.License.MIT_X11,
+            copyright="© 2026 %s · kassiobraga.com.br" % AUTOR,
+            comments="Captura de tela, gravação com voz e anotação para Linux.\n"
+                     "Software livre e de código aberto (licença MIT): use, estude, "
+                     "modifique e compartilhe à vontade.",
+        )
+        ab.add_link("Portfólio: kassiobraga.com.br", SITE_AUTOR)
+        ab.add_link("Página do Capture", "https://kassiobraga.github.io/capture/")
+        ab.add_link("Código-fonte no GitHub", URL_REPO)
+        ab.present()
+
 
 class App(Adw.Application):
     def __init__(self):
@@ -1722,6 +1825,10 @@ class App(Adw.Application):
                              "Inicia (ou encerra) uma gravação de tela", None)
         self.add_main_option("formato", ord("f"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
                              "Formato da gravação: mp4 ou gif", "FORMATO")
+        self.add_main_option("com-audio", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+                             "Inclui a voz do microfone na gravação em MP4", None)
+        self.add_main_option("sem-audio", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
+                             "Grava em MP4 sem capturar o microfone", None)
         self.add_main_option("modo", ord("m"), GLib.OptionFlags.NONE, GLib.OptionArg.STRING,
                              "ret, janela, tela, livre ou rolavel", "MODO")
         self.add_main_option("abrir", ord("a"), GLib.OptionFlags.NONE, GLib.OptionArg.FILENAME,
@@ -1760,6 +1867,10 @@ class App(Adw.Application):
             self.jan = Janela(self)
         if "formato" in op:
             self.jan._define_formato_gravacao(op["formato"])
+        if "sem-audio" in op:
+            self.jan._define_audio_gravacao(False)
+        elif "com-audio" in op:
+            self.jan._define_audio_gravacao(True)
         if "abrir" in op:
             # relativo ao diretorio de quem chamou, nao ao da instancia ja aberta
             arq = cl.create_file_for_arg(decodifica_caminho(op["abrir"]))

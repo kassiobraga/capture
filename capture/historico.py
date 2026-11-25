@@ -118,6 +118,7 @@ class Registro:
         self.anonimo = bool(prefs.get("anonimo", False))
         fmt = str(prefs.get("formato_gravacao", "mp4")).lower()
         self.formato_gravacao = fmt if fmt in dict(FORMATOS_GRAVACAO) else "mp4"
+        self.audio_gravacao = bool(prefs.get("audio_gravacao", True))
         bruto = _le_json(self.arq_registro, [])
         self._itens = [x for x in bruto if isinstance(x, dict)] if isinstance(bruto, list) else []
         self.sincronizar(agora=agora)
@@ -127,6 +128,7 @@ class Registro:
             "retencao": self.retencao,
             "anonimo": self.anonimo,
             "formato_gravacao": self.formato_gravacao,
+            "audio_gravacao": self.audio_gravacao,
         })
 
     def _salva_registro(self):
@@ -161,6 +163,11 @@ class Registro:
         self.formato_gravacao = fmt
         self._salva_prefs()
 
+    def definir_audio_gravacao(self, ativo):
+        """Liga ou desliga a captura do microfone nas gravacoes MP4 e persiste."""
+        self.audio_gravacao = bool(ativo)
+        self._salva_prefs()
+
     def sincronizar(self, agora=None):
         """Remove itens cujo arquivo sumiu e, no modo diario, itens de dias anteriores."""
         hoje = (agora or datetime.datetime.now()).strftime("%Y-%m-%d")
@@ -187,7 +194,7 @@ class Registro:
         """Itens validos, do mais novo para o mais antigo."""
         return self.sincronizar(agora=agora)
 
-    def adicionar(self, caminho, img=None, agora=None, tipo=None, duracao=None):
+    def adicionar(self, caminho, img=None, agora=None, tipo=None, duracao=None, audio=None):
         """Registra `caminho` no topo do historico; no modo anonimo nao faz nada."""
         self.sincronizar(agora=agora)
         if self.anonimo:
@@ -226,6 +233,8 @@ class Registro:
         }
         if duracao is not None:
             novo["duracao"] = round(max(0.0, float(duracao)), 2)
+        if audio is not None:
+            novo["audio"] = bool(audio)
         self._itens = [novo] + restantes
         self._salva_registro()
         return dict(novo)

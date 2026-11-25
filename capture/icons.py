@@ -245,6 +245,27 @@ def ic_video(cr):
     cr.fill()
 
 
+def ic_microfone(cr):
+    _ret(cr, 5.8, 2.2, 4.4, 7.0, 2.2)
+    cr.stroke()
+    cr.arc(8.0, 7.0, 4.2, 0, math.pi)
+    cr.stroke()
+    _linhas(cr, (8.0, 11.2, 8.0, 13.8), (5.6, 13.8, 10.4, 13.8))
+
+
+def ic_microfone_mudo(cr):
+    ic_microfone(cr)
+    _linhas(cr, (2.8, 2.8, 13.2, 13.2))
+
+
+def ic_sobre(cr):
+    cr.arc(8.0, 8.0, 5.6, 0, 2 * math.pi)
+    cr.stroke()
+    cr.arc(8.0, 5.1, 0.9, 0, 2 * math.pi)
+    cr.fill()
+    _linhas(cr, (8.0, 7.6, 8.0, 11.4))
+
+
 ICONES = {k[3:]: v for k, v in globals().items() if k.startswith("ic_")}
 
 
