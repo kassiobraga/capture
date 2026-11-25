@@ -2,11 +2,12 @@
 
 Documento para quem vai continuar o desenvolvimento (pessoa ou agente de IA).
 Descreve o que o Capture é, como o código está organizado, como se testa e se
-publica, o que já foi decidido e o que falta fazer. Estado em 19/11/2026,
-versão **1.4.2**.
+publica, o que já foi decidido e o que falta fazer. Estado em 25/11/2026,
+versão **1.5.0**.
 
 - Repositório: <https://github.com/kassiobraga/capture> (público, licença MIT)
 - Página de instalação: <https://kassiobraga.github.io/capture/>
+- Portfólio do autor: <https://kassiobraga.com.br>
 - Dono e mantenedor: Kassio Braga (conta GitHub `kassiobraga`), usa Linux Mint 22
   com Cinnamon em X11 e placa NVIDIA.
 
@@ -19,7 +20,7 @@ libadwaita. Fluxo principal: a pessoa aperta Print, seleciona uma área, e a
 imagem já sai copiada para a área de transferência e salva em PNG. Se quiser,
 anota por cima no editor antes de colar em outro lugar.
 
-### Recursos atuais (1.4.2)
+### Recursos atuais (1.5.0)
 
 - Modos de captura: retângulo, janela, tela cheia, forma livre e rolável; atraso opcional
   de 3, 5 ou 10 s; seleção em vários monitores ao mesmo tempo.
@@ -33,11 +34,15 @@ anota por cima no editor antes de colar em outro lugar.
   ou com Ctrl+W; se a aba tiver alterações não salvas (título com "•"), pede
   confirmação. Com 2+ abas, um botão no cabeçalho **junta todas num PDF**, uma
   página por aba.
-- **Gravação de tela**: gravação de região, janela ou tela inteira em MP4 e GIF
-  (botão REC com menu MP4/GIF ou Ctrl+G), com contador de tempo e botão de parar fora da área gravada.
+- **Gravação de tela com voz**: gravação de região, janela ou tela inteira em MP4
+  (com voz do microfone via PulseAudio/PipeWire em AAC, com interruptor no menu REC e
+  fallback automático sem áudio caso não haja microfone) e GIF, com contador de tempo,
+  indicador de microfone e botão de parar fora da área gravada.
 - **Histórico**: painel lateral recolhível (botão no cabeçalho ou Ctrl+H) com miniaturas,
   data e hora, reabertura em abas, cópia, limpeza diária da lista (mantendo os arquivos salvos)
   e modo anônimo.
+- **Sobre e assinatura**: janela nativa `Adw.AboutWindow` (botão `ⓘ` no cabeçalho e crédito na
+  tela inicial) com assinatura de Kassio Braga (`kassiobraga.com.br`), código-fonte e licença MIT.
 - Salvar como **PNG, JPEG ou PDF**, decidido pela extensão do nome.
 - Toda captura nova é copiada e salva automaticamente em `~/Imagens/Capturas`
   (pasta de imagens do usuário, via `GLib.get_user_special_dir`).
@@ -296,16 +301,34 @@ com contador de tempo e botão de parar fora da área gravada.
 
 Nota de empacotamento: a gravação em MP4 e GIF usa o ffmpeg que já vem no runtime GNOME 49,
 com H.264 provido pelo codecs-extra (ver comentário em flatpak/io.github.kassiobraga.Capture.yml,
-que confere 'ffmpeg -version' no build); por isso não foi preciso a extensão
+que confere 'ffmpeg -version' e o dispositivo 'pulse' no build); por isso não foi preciso a extensão
 org.freedesktop.Platform.ffmpeg-full nem GStreamer; o GIF é gerado com palettegen/paletteuse
-(capture/gravar.py); áudio do sistema ou microfone ficou fora do escopo, possível melhoria futura.
+(capture/gravar.py).
 
 ### 1.4: Captura rolável (concluída)
 
 Captura de páginas e janelas compridas com rolagem automática via XTest
 e emenda de quadros por comparação de pixels, com cabeçalho e rodapé fixos.
 
-### Próximo: Wayland
+### 1.5: Gravação com voz, site interativo e assinatura (concluída)
+
+Captura de voz do microfone nas gravações em MP4 via PulseAudio/PipeWire (`-f pulse -i default`
+com AAC e `-shortest`, permissão `--socket=pulseaudio` no Flatpak, opção `Gravar microfone` no
+menu REC, indicador ao vivo na `BarraGravacao` e fallback automático sem som se não houver
+microfone). Janela nativa `Adw.AboutWindow` e créditos com link para `https://kassiobraga.com.br`.
+Site público atualizado com simulação animada de desktop Linux e balõezinhos interativos explicando
+cada ferramenta.
+
+### 1.6: Produtividade no editor e seleção (próximo)
+
+- Zoom e rolagem vertical/horizontal no editor (`Ctrl + roda do mouse` e botão `100%` / `Ajustar`),
+  essencial para ler e anotar capturas roláveis compridas.
+- Marcadores numerados em sequência (`1`, `2`, `3`...) para tutoriais passo a passo.
+- Colar imagem da área de transferência (`Ctrl+V`) e abrir arquivos JPEG/WebP via `GdkPixbuf`.
+- Selo de dimensões ao vivo (`L × A px`) durante o arraste da seleção e ferramenta de destaque/foco.
+- (Opcional futuro): áudio do sistema (`monitor`) na gravação e OCR local para copiar texto da tela.
+
+### 2.0: Wayland
 
 A migração para Wayland utilizará o portal `org.freedesktop.portal.Screenshot` para capturas
 de tela e o portal `org.freedesktop.portal.ScreenCast` para gravação de vídeo.

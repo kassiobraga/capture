@@ -18,7 +18,7 @@
       <li>Editor with pen, highlighter, eraser, shapes, arrows, text and crop</li>
       <li>Pixelate sensitive areas, rotate and resize</li>
       <li>Each capture opens in a tab; join all tabs into one PDF</li>
-      <li>Screen recording (region, window or full screen) exported as MP4 or GIF</li>
+      <li>Screen recording (region, window or full screen) exported as MP4 (with microphone audio) or GIF</li>
       <li>Capture history sidebar with optional daily list cleanup and private mode</li>
       <li>Save as PNG, JPEG or PDF</li>
       <li>Every capture is copied to the clipboard and saved as PNG automatically</li>
@@ -33,7 +33,7 @@
       <li xml:lang="pt_BR">Editor com caneta, marca-texto, borracha, formas, setas, texto e corte</li>
       <li xml:lang="pt_BR">Pixele áreas sensíveis, gire e redimensione</li>
       <li xml:lang="pt_BR">Cada captura abre numa aba; junte todas as abas num PDF</li>
-      <li xml:lang="pt_BR">Gravação de tela (região, janela ou tela inteira) em MP4 ou GIF</li>
+      <li xml:lang="pt_BR">Gravação de tela (região, janela ou tela inteira) em MP4 (com voz do microfone) ou GIF</li>
       <li xml:lang="pt_BR">Histórico num painel lateral, com limpeza diária da lista e modo anônimo</li>
       <li xml:lang="pt_BR">Salve em PNG, JPEG ou PDF</li>
       <li xml:lang="pt_BR">Toda captura é copiada para a área de transferência e salva em PNG automaticamente</li>
@@ -42,9 +42,10 @@
     <p xml:lang="pt_BR">O Capture precisa de uma sessão X11.</p>
   </description>
   <launchable type="desktop-id">io.github.kassiobraga.Capture.desktop</launchable>
-  <url type="homepage">https://github.com/kassiobraga/capture</url>
+  <url type="homepage">https://kassiobraga.github.io/capture/</url>
   <url type="bugtracker">https://github.com/kassiobraga/capture/issues</url>
   <url type="vcs-browser">https://github.com/kassiobraga/capture</url>
+  <url type="contact">https://kassiobraga.com.br</url>
   <screenshots>
     <screenshot type="default">
       <image>https://raw.githubusercontent.com/kassiobraga/capture/main/docs/captura-editor.png</image>
@@ -85,6 +86,11 @@
     <keyword xml:lang="pt_BR">print</keyword>
   </keywords>
   <releases>
+    <release version="1.5.0" date="2026-11-25">
+      <description>
+        <p>Microphone voice recording in MP4 screencasts (via PulseAudio and PipeWire, with a toggle in the REC menu and a live indicator on the recording bar), plus an About dialog with project credits.</p>
+      </description>
+    </release>
     <release version="1.4.2" date="2026-11-19">
       <description>
         <p>Fixes a crash when starting a capture: the selection screen failed to open and the app looked frozen.</p>

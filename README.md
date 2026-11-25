@@ -28,10 +28,11 @@ quiser, marca por cima antes de colar em outro lugar.
   Ctrl+W. Se a aba tiver alterações não salvas, o Capture pergunta antes.
   Com duas abas ou mais, o botão de documento no cabeçalho junta todas num PDF,
   uma página por aba.
-- Gravação de tela (botão com o ícone vermelho REC ao lado dos modos, que abre
-  um menu com MP4 ou GIF, ou Ctrl+G): grave uma região, uma janela ou a tela
-  inteira em MP4 ou GIF, com contador de tempo ao vivo e botão de parar fora da
-  área gravada.
+- Gravação de tela com voz (botão com o ícone vermelho REC ao lado dos modos,
+  que abre um menu com MP4, GIF e a opção "Gravar microfone", ou Ctrl+G): grave
+  uma região, uma janela ou a tela inteira em MP4 (com a voz do seu microfone ou
+  sem áudio) ou em GIF animado, com contador de tempo ao vivo, indicador de
+  microfone e botão de parar fora da área gravada.
 - Histórico num painel lateral recolhível (botão no cabeçalho ou Ctrl+H), com
   miniatura, data e hora: reabra numa aba nova, copie, abra a pasta do arquivo ou
   remova da lista. Inclui opção de limpar a lista todo dia (mantendo os arquivos
@@ -94,13 +95,14 @@ versões são publicadas, veja [docs/FLATHUB.md](docs/FLATHUB.md).
 - Python 3.10 ou mais novo (testado apenas com 3.12), **GTK 4.12 ou mais novo** e
   **libadwaita 1.4 ou mais nova**. O instalador confere as versões.
 - `python3-xlib`, ou então `maim` e `xclip` e, para o modo "janela", `xprop` e
-  `xwininfo` (pacote `x11-utils`). `rsvg-convert` é opcional e só gera os ícones PNG na instalação.
+  `xwininfo` (pacote `x11-utils`). `ffmpeg` para gravação em MP4/GIF (com PulseAudio
+  ou PipeWire para gravar o microfone). `rsvg-convert` é opcional e só gera os ícones PNG na instalação.
 
 No Debian, Ubuntu e Linux Mint:
 
 ```sh
 sudo apt install python3-gi python3-gi-cairo python3-cairo \
-    gir1.2-gtk-4.0 gir1.2-adw-1 python3-xlib xclip librsvg2-bin
+    gir1.2-gtk-4.0 gir1.2-adw-1 python3-xlib xclip ffmpeg librsvg2-bin
 ```
 
 Desenvolvido e testado no Linux Mint 22 com Cinnamon 6.
@@ -170,6 +172,7 @@ Linha de comando:
 | `capture --modo MODO` | também inicia uma captura agora, no modo indicado, usando o atraso escolhido na janela principal |
 | `capture --gravar` | inicia uma gravação de tela agora (ou para e salva, se já estiver gravando) |
 | `capture --gravar --formato mp4\|gif --modo ret\|janela\|tela` | grava no formato e no modo indicados |
+| `capture --gravar --com-audio` / `--sem-audio` | liga ou desliga a captura do microfone nos vídeos MP4 |
 | `capture --abrir ARQUIVO.png` | abre um PNG no editor (caminho relativo vale a partir de onde você chamou) |
 
 Se o Capture já estiver aberto, os comandos são enviados à instância em execução.
@@ -239,8 +242,8 @@ As imagens desta página foram geradas por `docs/gerar_captura.py`.
 ```
 capture/      pacote Python (app, overlay, editor, gravar, historico, icons, x11, arquivos, costura, rolagem)
 data/         ícone SVG, modelo do .desktop e metainfo (AppStream)
-flatpak/      manifesto do pacote Flatpak
-docs/         imagens do README e o script que as gera
+flatpak/      manifesto do pacote Flatpak e site público (GitHub Pages)
+docs/         imagens do README, documento de passagem e script gerador
 scripts/      funções do atalho do Cinnamon usadas pelos scripts de instalação
 tests/        testes unitários; tests/e2e tem os de ponta a ponta
 install.sh    instalação local
@@ -257,9 +260,17 @@ uninstall.sh  remoção
   e modo anônimo.
 - **1.3**: gravação de tela (região, janela ou tela inteira) em MP4 ou
   GIF.
-- **1.4** (atual): captura rolável, para páginas e janelas mais compridas que a tela.
-- **Depois**: suporte a Wayland (captura pelo portal do sistema).
+- **1.4**: captura rolável, para páginas e janelas mais compridas que a tela.
+- **1.5** (atual): gravação com voz do microfone nos vídeos MP4, indicador ao
+  vivo na barra de gravação e janela Sobre com créditos do projeto.
+- **1.6** (próximo): zoom e rolagem no editor para imagens compridas, marcadores
+  numerados (1, 2, 3), colar imagem (`Ctrl+V`), abrir JPEG/WebP e dimensões na
+  seleção.
+- **2.0**: suporte a Wayland (captura e gravação pelos portais do sistema).
 
-## Licença
+## Autor e Licença
 
-MIT. Veja o arquivo [LICENSE](LICENSE).
+Criado e mantido por **Kassio Braga** (<https://kassiobraga.com.br>).
+
+O Capture é software livre e de código aberto sob a licença **MIT**: você pode
+usar, estudar, modificar e distribuir livremente. Veja o arquivo [LICENSE](LICENSE).
