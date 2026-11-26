@@ -43,11 +43,11 @@ class Versao(unittest.TestCase):
 
     def test_pagina_do_site_cita_a_1_5_e_portfolio(self):
         s = fonte("flatpak/site/index.html")
-        self.assertRegex(s, r"1\.5\s*<span class=\"etiqueta\">dispon")
+        self.assertRegex(s, r"v1\.5\.0</span>\s*<span class=\"status-pill status-done\">Dispon")
         self.assertIn("rolável", s.lower())
         self.assertIn("microfone", s.lower())
         self.assertIn("kassiobraga.com.br", s)
-        self.assertIn("balao-dica", s)
+        self.assertIn("tooltip-bubble", s)
 
     def test_documento_de_passagem_atualizado(self):
         h = fonte("docs/HANDOFF.md")
