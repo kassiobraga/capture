@@ -55,5 +55,45 @@ class Xlib(unittest.TestCase):
         subprocess.run(["xclip", "-selection", "clipboard"], input=b"fim", timeout=5)
 
 
+class ConsensoQuadros(unittest.TestCase):
+    def _quadro(self, h=20, passo=16, faixa=None):
+        """Gera um quadro limpo com opcional faixa corrompida (y0, y1, byte)."""
+        linhas = [bytes([10 + i]) * passo for i in range(h)]
+        if faixa is not None:
+            y0, y1, val = faixa
+            for i in range(y0, y1):
+                linhas[i] = bytes([val]) * passo
+        return b"".join(linhas)
+
+    def test_tela_estatica_para_no_segundo_quadro(self):
+        limpo = self._quadro()
+        chamadas = []
+
+        def ler():
+            chamadas.append(1)
+            return limpo, 4, 20, 16
+
+        res, w, h, passo = x11._capturar_estavel(ler, intervalo=0, dormir=lambda _: None)
+        self.assertEqual(len(chamadas), 2)
+        self.assertEqual((res, w, h, passo), (limpo, 4, 20, 16))
+
+    def test_remove_faixa_no_primeiro_segundo_ou_terceiro_quadro(self):
+        limpo = self._quadro()
+        sujo = self._quadro(faixa=(8, 12, 250))
+        for seq in ([sujo, limpo, limpo], [limpo, sujo, limpo], [limpo, limpo, sujo]):
+            it = iter(seq)
+            res, *_ = x11._capturar_estavel(
+                lambda: (next(it), 4, 20, 16), intervalo=0, dormir=lambda _: None
+            )
+            self.assertEqual(res, limpo)
+
+    def test_remove_faixas_em_linhas_distintas_entre_quadros(self):
+        limpo = self._quadro()
+        q1 = self._quadro(faixa=(2, 5, 200))
+        q2 = self._quadro(faixa=(12, 15, 210))
+        q3 = limpo
+        self.assertEqual(x11._combinar_quadros(q1, q2, q3, 20, 16), limpo)
+
+
 if __name__ == "__main__":
     unittest.main()

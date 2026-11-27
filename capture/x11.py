@@ -8,6 +8,7 @@ import ctypes.util
 import re
 import subprocess
 import sys
+import time
 
 try:
     from Xlib import X, display as xdisplay, xauth
@@ -108,7 +109,7 @@ def _libx11():
     x = ctypes.CDLL(nome)
     x.XOpenDisplay.restype = ctypes.c_void_p
     x.XOpenDisplay.argtypes = [ctypes.c_char_p]
-    for f in ("XDefaultScreen", "XCloseDisplay", "XSync", "XFlush"):
+    for f in ("XDefaultScreen", "XCloseDisplay", "XSync", "XFlush", "XGrabServer", "XUngrabServer"):
         getattr(x, f).argtypes = [ctypes.c_void_p] + ([ctypes.c_int] if f == "XSync" else [])
     x.XRootWindow.restype = ctypes.c_ulong
     x.XRootWindow.argtypes = [ctypes.c_void_p, ctypes.c_int]
@@ -137,8 +138,53 @@ def _para_cairo(dados, w, h, passo_origem):
     return img
 
 
+def _combinar_quadros(q1, q2, q3, h, passo):
+    """Remove faixas transientes do compositor (tearing/wallpaper) por consenso linha a linha."""
+    if q1 == q2:
+        return q1
+    if q2 == q3:
+        return q2
+    if q1 == q3:
+        return q1
+    linhas = []
+    for i in range(h):
+        ini = i * passo
+        fim = ini + passo
+        l1 = q1[ini:fim]
+        l2 = q2[ini:fim]
+        if l1 == l2:
+            linhas.append(l1)
+        else:
+            l3 = q3[ini:fim]
+            if l2 == l3:
+                linhas.append(l2)
+            elif l1 == l3:
+                linhas.append(l1)
+            else:
+                linhas.append(l3)
+    return b"".join(linhas)
+
+
+def _capturar_estavel(ler_quadro, intervalo=0.04, dormir=time.sleep):
+    """Le 2 quadros (ou 3 se diferirem) e elimina faixas de 1 frame sem atrasar a captura."""
+    q1, w, h, passo = ler_quadro()
+    if intervalo > 0:
+        dormir(intervalo)
+    q2, w2, h2, passo2 = ler_quadro()
+    if (w2, h2, passo2) != (w, h, passo):
+        return q2, w2, h2, passo2
+    if q1 == q2:
+        return q1, w, h, passo
+    if intervalo > 0:
+        dormir(intervalo)
+    q3, w3, h3, passo3 = ler_quadro()
+    if (w3, h3, passo3) != (w, h, passo):
+        return q3, w3, h3, passo3
+    return _combinar_quadros(q1, q2, q3, h, passo), w, h, passo
+
+
 def _foto_libx11():
-    """Tela inteira num unico XGetImage, pela libX11 (rapido; a mesma que o GTK usa)."""
+    """Tela inteira com XGrabServer + consenso entre quadros pela libX11."""
     x = _libx11()
     d = x.XOpenDisplay(None)
     if not d:
@@ -146,20 +192,32 @@ def _foto_libx11():
     anterior = x.XSetErrorHandler(ctypes.cast(_TRATA_ERRO, ctypes.c_void_p))
     try:
         tela = x.XDefaultScreen(d)
-        w, h = x.XDisplayWidth(d, tela), x.XDisplayHeight(d, tela)
-        del _erro_x[:]
-        im = x.XGetImage(d, x.XRootWindow(d, tela), 0, 0, w, h, ctypes.c_ulong(-1).value, 2)  # ZPixmap
-        x.XSync(d, 0)
-        if not im or _erro_x:
-            raise RuntimeError("o servidor X recusou a captura")
-        try:
-            r = im.contents
-            if r.bits_per_pixel != 32 or r.byte_order != 0 or r.depth not in (24, 32):
-                raise RuntimeError("formato de pixel nao suportado (%d bpp)" % r.bits_per_pixel)
-            dados = ctypes.string_at(r.data, r.bytes_per_line * h)
-            return _para_cairo(dados, w, h, r.bytes_per_line)
-        finally:
-            ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)(im.contents.f[1])(im)  # destroy_image
+        raiz = x.XRootWindow(d, tela)
+
+        def ler():
+            w, h = x.XDisplayWidth(d, tela), x.XDisplayHeight(d, tela)
+            del _erro_x[:]
+            x.XGrabServer(d)
+            try:
+                x.XSync(d, 0)
+                im = x.XGetImage(d, raiz, 0, 0, w, h, ctypes.c_ulong(-1).value, 2)  # ZPixmap
+                x.XSync(d, 0)
+            finally:
+                x.XUngrabServer(d)
+                x.XFlush(d)
+            if not im or _erro_x:
+                raise RuntimeError("o servidor X recusou a captura")
+            try:
+                r = im.contents
+                if r.bits_per_pixel != 32 or r.byte_order != 0 or r.depth not in (24, 32):
+                    raise RuntimeError("formato de pixel nao suportado (%d bpp)" % r.bits_per_pixel)
+                dados = ctypes.string_at(r.data, r.bytes_per_line * h)
+                return dados, w, h, r.bytes_per_line
+            finally:
+                ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)(im.contents.f[1])(im)  # destroy_image
+
+        dados, w, h, passo = _capturar_estavel(ler)
+        return _para_cairo(dados, w, h, passo)
     finally:
         x.XSetErrorHandler(anterior)
         x.XCloseDisplay(d)
@@ -172,15 +230,20 @@ def _foto_xlib():
     d = _abre()
     try:
         raiz = d.screen().root
-        geo = raiz.get_geometry()
-        w, h = geo.width, geo.height
-        bpp = {f.depth: f.bits_per_pixel for f in d.display.info.pixmap_formats}.get(geo.depth)
-        if geo.depth not in (24, 32) or bpp != 32 or d.display.info.image_byte_order != X.LSBFirst:
-            raise RuntimeError("formato de pixel nao suportado (profundidade %d)" % geo.depth)
-        # Um unico pedido: o servidor copia a tela de uma vez (em faixas, cada faixa saia de
-        # um instante diferente e um redesenho no meio deixava listras na captura).
-        dados = raiz.get_image(0, 0, w, h, X.ZPixmap, 0xFFFFFFFF).data
-        return _para_cairo(dados, w, h, w * 4)
+
+        def ler():
+            geo = raiz.get_geometry()
+            w, h = geo.width, geo.height
+            bpp = {f.depth: f.bits_per_pixel for f in d.display.info.pixmap_formats}.get(geo.depth)
+            if geo.depth not in (24, 32) or bpp != 32 or d.display.info.image_byte_order != X.LSBFirst:
+                raise RuntimeError("formato de pixel nao suportado (profundidade %d)" % geo.depth)
+            # Um unico pedido: o servidor copia a tela de uma vez (em faixas, cada faixa saia de
+            # um instante diferente e um redesenho no meio deixava listras na captura).
+            dados = raiz.get_image(0, 0, w, h, X.ZPixmap, 0xFFFFFFFF).data
+            return (dados if isinstance(dados, bytes) else bytes(dados)), w, h, w * 4
+
+        dados, w, h, passo = _capturar_estavel(ler)
+        return _para_cairo(dados, w, h, passo)
     finally:
         d.close()
 

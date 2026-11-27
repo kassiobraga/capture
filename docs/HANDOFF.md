@@ -115,10 +115,11 @@ install.sh      instalacao manual em ~/.local (modo desenvolvimento)
 - **Abas**: cada aba é um `Editor`. `Janela.editor` aponta sempre para o da aba
   atual; sem abas, aponta para `_sem_aba` (editor vazio fora da tela). Cores,
   espessuras e ferramenta são compartilhadas entre abas.
-- **Captura da tela** (`x11.foto_da_tela`): um único `XGetImage` na janela raiz
-  pela libX11 (ctypes). Antes era em faixas via python-xlib, e um redesenho no
-  meio deixava listras com o papel de parede (bug corrigido na 1.1.1). Ordem de
-  reserva: libX11 → python-xlib → `maim`.
+- **Captura da tela** (`x11.foto_da_tela`): `XGrabServer`/`XUngrabServer` com
+  `XGetImage` na janela raiz pela libX11 (ctypes) e consenso linha a linha entre
+  quadros rápidos (`_capturar_estavel`, 1.5.1) para eliminar faixas transientes
+  do papel de parede no compositor Muffin + NVIDIA. Ordem de reserva:
+  libX11 → python-xlib → `maim`.
 - **Área de transferência**: `xclip` se existir (instalação manual); senão
   `python3 -m capture.area` (processo próprio que fica dono do CLIPBOARD até
   outro app copiar algo); por último `Gdk.Clipboard`.

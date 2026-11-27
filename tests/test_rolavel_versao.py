@@ -19,12 +19,13 @@ def fonte(rel):
 
 class Versao(unittest.TestCase):
     def test_versao_do_pacote(self):
-        self.assertEqual(capture.__version__, "1.5.0")
+        self.assertEqual(capture.__version__, "1.5.1")
 
-    def test_metainfo_valido_com_a_1_5_0_no_topo(self):
+    def test_metainfo_valido_com_a_1_5_1_no_topo(self):
         raiz = ET.fromstring(fonte("data/io.github.kassiobraga.Capture.metainfo.xml"))
         versoes = [r.get("version") for r in raiz.find("releases").findall("release")]
-        self.assertEqual(versoes[0], "1.5.0")
+        self.assertEqual(versoes[0], "1.5.1")
+        self.assertIn("1.5.0", versoes)
         self.assertIn("1.4.2", versoes)
         self.assertIn("1.4.1", versoes)
         self.assertIn("1.3.0", versoes)
@@ -43,7 +44,7 @@ class Versao(unittest.TestCase):
 
     def test_pagina_do_site_cita_a_1_5_e_portfolio(self):
         s = fonte("flatpak/site/index.html")
-        self.assertRegex(s, r"v1\.5\.0</span>\s*<span class=\"status-pill status-done\">Dispon")
+        self.assertRegex(s, r"v1\.5\.1</span>\s*<span class=\"status-pill status-done\">Dispon")
         self.assertIn("rolável", s.lower())
         self.assertIn("microfone", s.lower())
         self.assertIn("kassiobraga.com.br", s)
@@ -51,7 +52,7 @@ class Versao(unittest.TestCase):
 
     def test_documento_de_passagem_atualizado(self):
         h = fonte("docs/HANDOFF.md")
-        self.assertIn("1.5.0", h)
+        self.assertIn("1.5.1", h)
         self.assertIn("kassiobraga.com.br", h)
 
     def test_sem_travessao_nos_textos(self):
