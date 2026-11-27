@@ -1,0 +1,3003 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capture · Captura de tela, anotações e gravação com voz para Linux</title>
+<meta name="description" content="Aperte Print, selecione e a imagem já fica copiada e salva. Anote com setas, texto e pixelização, capture páginas roláveis e grave vídeos MP4 com voz ou GIF. Software livre (MIT) por Kassio Braga.">
+<link rel="icon" type="image/svg+xml" href="capture.svg">
+<link rel="author" href="https://kassiobraga.com.br">
+<meta property="og:title" content="Capture · Captura de tela, anotações e gravação com voz para Linux">
+<meta property="og:description" content="Aperte Print, selecione, anote ou grave a tela com voz. Grátis, software livre (MIT) e com atualização automática.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kassiobraga.github.io/capture/">
+<meta property="og:image" content="https://kassiobraga.github.io/capture/img/captura-editor-claro.png">
+<meta name="theme-color" content="#0A0A0B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Capture",
+  "operatingSystem": "Linux",
+  "applicationCategory": "UtilitiesApplication",
+  "softwareVersion": "1.5.1",
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://kassiobraga.github.io/capture/",
+  "downloadUrl": "https://kassiobraga.github.io/capture/io.github.kassiobraga.Capture.flatpakref",
+  "author": {
+    "@type": "Person",
+    "name": "Kassio Braga",
+    "url": "https://kassiobraga.com.br"
+  },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "BRL"
+  }
+}
+</script>
+<style>
+  /* ==========================================================================
+     Capture 1.5.1 · Design Engineering System (emilkowalski/skills)
+     ========================================================================== */
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+    --bg: #FAFAFA;
+    --bg-subtle: #F2F3F5;
+    --surface: #FFFFFF;
+    --surface-hover: #F5F6F8;
+    --surface-elevated: rgba(250, 250, 250, 0.86);
+    --border: rgba(15, 23, 42, 0.09);
+    --border-strong: rgba(15, 23, 42, 0.16);
+    --fg: #111214;
+    --fg-secondary: #4A505B;
+    --fg-muted: #6C7380;
+
+    --accent: #0D966E;
+    --accent-bright: #2BD9A8;
+    --accent-soft: rgba(13, 150, 110, 0.10);
+    --rec: #E5484D;
+    --rec-soft: rgba(229, 72, 77, 0.11);
+
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 12px 32px -10px rgba(15, 23, 42, 0.13), 0 2px 6px rgba(15, 23, 42, 0.05);
+    --shadow-lg: 0 32px 72px -20px rgba(15, 23, 42, 0.24), 0 10px 24px -8px rgba(15, 23, 42, 0.10);
+    --shadow-popover: 0 18px 40px -8px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.08);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 22px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+    color-scheme: light;
+  }
+
+  [data-theme="dark"] {
+    --bg: #0A0A0B;
+    --bg-subtle: #111114;
+    --surface: #141417;
+    --surface-hover: #1B1C20;
+    --surface-elevated: rgba(10, 10, 11, 0.84);
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --fg: #F5F6F8;
+    --fg-secondary: #A6ACB8;
+    --fg-muted: #7C8290;
+
+    --accent: #2BD9A8;
+    --accent-bright: #3CE6B7;
+    --accent-soft: rgba(43, 217, 168, 0.12);
+    --rec: #FF5C61;
+    --rec-soft: rgba(255, 92, 97, 0.14);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-md: 0 16px 38px -12px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 36px 80px -20px rgba(0, 0, 0, 0.85), 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+    --shadow-popover: 0 18px 42px -8px rgba(0, 0, 0, 0.78), 0 0 0 1px rgba(255, 255, 255, 0.12);
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    transition: background-color 220ms ease, color 220ms ease;
+    overflow-x: hidden;
+  }
+  a { color: inherit; text-decoration: none; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .container {
+    width: 100%;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ==========================================================================
+     Header
+     ========================================================================== */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: var(--surface-elevated);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--border);
+    transition: background-color 220ms ease, border-color 220ms ease;
+  }
+  .topbar-inner {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 660;
+    font-size: 15px;
+    letter-spacing: -0.015em;
+    transition: transform 160ms var(--ease-out);
+  }
+  .brand:active { transform: scale(0.97); }
+  .brand svg { width: 28px; height: 28px; flex-shrink: 0; border-radius: 7px; box-shadow: var(--shadow-xs); }
+  .brand-ver {
+    font-size: 11px;
+    font-weight: 650;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .nav-links { display: flex; align-items: center; gap: 4px; }
+  .nav-links a {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--fg-secondary);
+    padding: 6px 11px;
+    border-radius: var(--radius-sm);
+    transition: color 160ms ease, background-color 160ms ease, transform 160ms var(--ease-out);
+  }
+  .nav-links a:active { transform: scale(0.97); }
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--fg-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .icon-btn:active { transform: scale(0.95); }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 11px;
+    font-size: 14.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 160ms var(--ease-out), background-color 160ms ease, border-color 160ms ease, box-shadow 180ms var(--ease-out), color 160ms ease;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-sm { height: 34px; padding: 0 13px; font-size: 13.5px; border-radius: 9px; }
+  .btn-primary { background: var(--fg); color: var(--bg); box-shadow: var(--shadow-sm); }
+  [data-theme="dark"] .btn-primary { background: var(--accent); color: #062118; }
+  .btn-secondary { background: var(--surface); color: var(--fg); border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+
+  /* ==========================================================================
+     Hero + Coreografia
+     ========================================================================== */
+  .hero { padding: 68px 0 44px; }
+  .hero-header { text-align: center; max-width: 740px; margin: 0 auto 42px; }
+  .hero-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--fg-muted);
+    margin-bottom: 18px;
+  }
+  .hero-meta a {
+    color: var(--fg);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-strong);
+    transition: border-color 160ms ease, color 160ms ease;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(2.4rem, 5.2vw, 3.85rem);
+    font-weight: 720;
+    line-height: 1.06;
+    letter-spacing: -0.035em;
+  }
+  h1 .hl { color: var(--accent); }
+  .hero-lead {
+    margin: 20px auto 0;
+    max-width: 58ch;
+    font-size: clamp(1.02rem, 1.8vw, 1.15rem);
+    line-height: 1.62;
+    color: var(--fg-secondary);
+  }
+  .hero-cta {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .hero-footnote { margin-top: 14px; font-size: 12.5px; color: var(--fg-muted); }
+
+  @keyframes waveEnter {
+    from { opacity: 0; transform: translateY(12px) scale(0.99); filter: blur(2px); }
+    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  .choreo { animation: waveEnter 520ms var(--ease-out) both; animation-delay: var(--d, 0ms); }
+
+  /* ==========================================================================
+     Simulador Linux Fiel ao App Real do Capture 1.5.1
+     ========================================================================== */
+  .stage-shell { position: relative; max-width: 1000px; margin: 0 auto; }
+  .scene-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .segmented {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 13px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+  }
+  .seg-indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    height: calc(100% - 8px);
+    border-radius: 9px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    pointer-events: none;
+    transition: transform 280ms var(--ease-in-out), width 280ms var(--ease-in-out);
+    will-change: transform, width;
+  }
+  .seg-btn {
+    position: relative;
+    z-index: 1;
+    border: 0;
+    background: transparent;
+    color: var(--fg-secondary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 560;
+    padding: 7px 13px;
+    border-radius: 9px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    transition: color 180ms ease, transform 160ms var(--ease-out);
+  }
+  .seg-btn:active { transform: scale(0.97); }
+  .seg-btn[aria-selected="true"] { color: var(--fg); }
+  .seg-num {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--border);
+    color: var(--fg-secondary);
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+  .seg-btn[aria-selected="true"] .seg-num { background: var(--accent); color: #FFFFFF; }
+  [data-theme="dark"] .seg-btn[aria-selected="true"] .seg-num { color: #062118; }
+
+  .stage-controls { display: flex; align-items: center; gap: 10px; }
+  .hint-pill { font-size: 12.5px; color: var(--fg-muted); }
+  .play-btn {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--fg-secondary);
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 560;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform 160ms var(--ease-out), border-color 160ms ease, color 160ms ease;
+  }
+  .play-btn:active { transform: scale(0.96); }
+
+  /* Monitor Linux */
+  .linux-screen {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: #0F1115;
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-lg);
+    aspect-ratio: 16 / 10;
+    min-height: 495px;
+    user-select: none;
+    color: #F3F4F6;
+  }
+  .linux-wallpaper {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(110% 85% at 15% 12%, rgba(43, 217, 168, 0.14) 0%, rgba(43, 217, 168, 0.04) 38%, transparent 70%),
+      radial-gradient(95% 80% at 88% 88%, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0.03) 40%, transparent 72%),
+      linear-gradient(180deg, #161922 0%, #101319 56%, #0B0D11 100%);
+  }
+
+  .gnome-panel {
+    position: relative;
+    z-index: 12;
+    height: 28px;
+    padding: 0 14px;
+    background: rgba(11, 12, 15, 0.84);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 560;
+    color: rgba(243, 244, 246, 0.86);
+  }
+  .gnome-left, .gnome-right { display: flex; align-items: center; gap: 10px; }
+  .gnome-pill { width: 15px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.72); }
+  .gnome-dot { width: 6px; height: 6px; border-radius: 50%; background: #2BD9A8; }
+
+  .scene-progress-track {
+    position: absolute;
+    top: 28px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.06);
+    z-index: 25;
+  }
+  .scene-progress-fill { height: 100%; width: 0%; background: var(--accent-bright); }
+
+  .desktop-area {
+    position: relative;
+    height: calc(100% - 28px);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* App de fundo (a mesma janela clara do captura-editor.png, para a selecao bater 100%!) */
+  .target-app {
+    position: absolute;
+    inset: 24px 66px 28px;
+    border-radius: 12px;
+    background: #F4F7FC;
+    border: 1px solid rgba(15, 23, 42, 0.16);
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.50);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: scale(0.97);
+    transition: opacity 260ms var(--ease-out), transform 280ms var(--ease-out);
+    pointer-events: none;
+  }
+  .target-app.visible { opacity: 1; transform: scale(1); }
+  .target-chrome {
+    height: 36px;
+    padding: 0 14px;
+    background: #3B547B;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .t-dot { width: 11px; height: 11px; border-radius: 50%; display: block; }
+  .t-dot.r { background: #EA6662; }
+  .t-dot.y { background: #F5C350; }
+  .t-dot.g { background: #67C57D; }
+  .target-body {
+    flex: 1;
+    padding: 22px 26px;
+    overflow: hidden;
+    position: relative;
+  }
+  .scroll-sheet {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: transform 900ms var(--ease-in-out);
+    will-change: transform;
+  }
+  .mock-top-grid {
+    display: grid;
+    grid-template-columns: 1.55fr 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .mock-lines { display: grid; gap: 11px; }
+  .ml { height: 11px; border-radius: 3px; background: #B8C2D1; }
+  .mock-cta-blue {
+    height: 44px;
+    border-radius: 5px;
+    background: #3B8AE0;
+  }
+  .mock-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 18px;
+    align-items: end;
+    margin-top: 8px;
+  }
+  .mock-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    height: 110px;
+    justify-content: flex-end;
+  }
+  .mock-bars span { width: 22px; background: #8E9EB7; border-radius: 2px 2px 0 0; }
+  .mock-extra-card {
+    background: #E8EEF7;
+    border-radius: 8px;
+    padding: 14px;
+    display: grid;
+    gap: 8px;
+  }
+
+  /* Overlay de selecao Print */
+  .select-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 16;
+    background: rgba(7, 10, 14, 0.50);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease-out);
+  }
+  .select-overlay.active { opacity: 1; }
+  .select-box {
+    position: absolute;
+    left: 11%;
+    top: 10%;
+    width: 0;
+    height: 0;
+    border: 2px solid #2BD9A8;
+    border-radius: 4px;
+    background: rgba(43, 217, 168, 0.06);
+    box-shadow: 0 0 0 9999px rgba(7, 10, 14, 0.42);
+    transition: width 680ms var(--ease-in-out), height 680ms var(--ease-in-out);
+  }
+  .select-box.drawn { width: 78%; height: 78%; }
+  .select-dim {
+    position: absolute;
+    top: -28px;
+    left: 0;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: #141518;
+    border: 1px solid rgba(43, 217, 168, 0.50);
+    color: #2BD9A8;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .capture-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    background: rgba(255, 255, 255, 0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms var(--ease-out);
+  }
+  .capture-flash.flash { opacity: 1; }
+
+  /* ==========================================================================
+     JANELA REAL DO CAPTURE 1.5.1 (fiel ao captura-editor.png e captura-inicial.png)
+     ========================================================================== */
+  .capture-win {
+    position: relative;
+    z-index: 18;
+    width: min(760px, 94%);
+    height: min(442px, 94%);
+    border-radius: 14px;
+    background: #19191B;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow: 0 28px 66px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    filter: blur(2px);
+    transition: opacity 280ms var(--ease-out), transform 300ms var(--ease-out), filter 260ms var(--ease-out);
+    pointer-events: none;
+  }
+  .capture-win.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    pointer-events: auto;
+  }
+
+  /* HeaderBar real do Capture */
+  .cap-header {
+    height: 48px;
+    padding: 0 14px;
+    background: #1C1C1E;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px 14px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .cap-title-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #F4F4F6;
+    letter-spacing: -0.01em;
+  }
+  .cap-tools-center {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cap-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cap-ico {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #D4D6DC;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 150ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+  .cap-ico:active { transform: scale(0.94); }
+  .cap-ico.active {
+    background: rgba(43, 217, 168, 0.14);
+    border-color: rgba(43, 217, 168, 0.36);
+    color: #2BD9A8;
+  }
+  .cap-ico svg { width: 16px; height: 16px; }
+
+  .cap-timer-btn {
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    color: #E2E4E9;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: background-color 150ms ease, transform 150ms var(--ease-out);
+  }
+  .cap-timer-btn:active { transform: scale(0.95); }
+
+  .cap-rec-pill {
+    height: 30px;
+    padding: 0 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 92, 97, 0.30);
+    background: rgba(255, 92, 97, 0.12);
+    color: #FF878A;
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 650;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: transform 150ms var(--ease-out), background-color 150ms ease, color 150ms ease;
+  }
+  .cap-rec-pill:active { transform: scale(0.95); }
+  .cap-rec-pill.active { background: #E5484D; border-color: #FF6B70; color: #FFFFFF; }
+  .cap-rec-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* Botao pill verde-menta "Capturar" igual ao app real */
+  .cap-capture-cta {
+    height: 32px;
+    padding: 0 13px;
+    border-radius: 9px;
+    border: 0;
+    background: #2BD9A8;
+    color: #062118;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(43, 217, 168, 0.26);
+    transition: transform 150ms var(--ease-out), background-color 150ms ease;
+  }
+  .cap-capture-cta:active { transform: scale(0.96); }
+
+  /* Controles de janela reais (inclui botao fechar circular verde-menta) */
+  .cap-win-ctrls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 4px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 11px;
+  }
+  .cap-close-mint {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2BD9A8;
+    color: #062118;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  /* Area interna do Editor real */
+  .cap-body {
+    flex: 1;
+    position: relative;
+    background: #19191B;
+    border-radius: 0 0 14px 14px;
+    padding: 16px 26px 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* A captura real dentro do editor (SVG unificado 100% proporcional, nunca corta) */
+  .real-shot {
+    position: relative;
+    width: 100%;
+    max-width: 636px;
+    height: 100%;
+    border-radius: 10px;
+    background: #F4F7FC;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .real-shot-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Marca-texto amarelo (scaleX a partir da esquerda) */
+  .hl-rect {
+    transform-box: fill-box;
+    transform-origin: left center;
+    transform: scaleX(0);
+    opacity: 0;
+    transition: transform 460ms var(--ease-out), opacity 160ms ease;
+  }
+  .hl-rect.on { transform: scaleX(1); opacity: 1; }
+
+  /* Area pixelada SVG sobre o token sensivel */
+  .pixel-group {
+    transform-box: fill-box;
+    transform-origin: center;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .pixel-group.on { opacity: 1; transform: scale(1); }
+
+  /* Anotacoes SVG fieis ao captura-editor.png */
+  .a-stroke {
+    stroke-dasharray: 520;
+    stroke-dashoffset: 520;
+    opacity: 0;
+    transition: stroke-dashoffset 520ms var(--ease-out), opacity 180ms ease;
+  }
+  .a-stroke.on { stroke-dashoffset: 0; opacity: 1; }
+  .a-text {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .a-text.on { opacity: 1; transform: translateY(0); }
+
+  /* Pilula de dimensoes no canto inferior esquerdo (640 x 400 px) */
+  .dim-pill {
+    position: absolute;
+    left: 16px;
+    bottom: 14px;
+    height: 30px;
+    padding: 0 11px;
+    border-radius: 9px;
+    background: #232327;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    color: rgba(244, 244, 246, 0.78);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Dock flutuante centralizado real (fiel ao captura-editor.png!) */
+  .floating-dock {
+    position: absolute;
+    left: 50%;
+    bottom: 11px;
+    transform: translateX(-50%);
+    height: 42px;
+    padding: 0 8px;
+    border-radius: 13px;
+    background: #222226;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .dock-div {
+    width: 1px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.10);
+    margin: 0 4px;
+  }
+  .color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #EF332E;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    margin: 0 4px;
+    transition: transform 150ms var(--ease-out);
+  }
+  .color-swatch:active { transform: scale(0.92); }
+
+  /* Moldura de area sendo gravada (Cena 4: MP4 com voz) */
+  .rec-frame {
+    position: absolute;
+    inset: 18px 56px 76px;
+    z-index: 20;
+    border: 2px dashed rgba(255, 92, 97, 0.88);
+    border-radius: 14px;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.97);
+    transition: opacity 240ms var(--ease-out), transform 260ms var(--ease-out);
+  }
+  .rec-frame.visible { opacity: 1; transform: scale(1); }
+  .rec-frame-tag {
+    position: absolute;
+    top: -12px;
+    left: 14px;
+    padding: 2px 9px;
+    border-radius: 6px;
+    background: #E5484D;
+    color: #FFFFFF;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 12px rgba(229, 72, 77, 0.4);
+  }
+
+  /* Efeito ripple de clique na tela durante gravacao */
+  .click-ripple {
+    position: absolute;
+    right: 176px;
+    top: 108px;
+    z-index: 22;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2.5px solid #2BD9A8;
+    background: rgba(43, 217, 168, 0.18);
+    opacity: 0;
+    transform: scale(0.6);
+    pointer-events: none;
+    transition: transform 360ms var(--ease-out), opacity 360ms var(--ease-out);
+  }
+  .click-ripple.pulse {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+  .click-ripple.show {
+    opacity: 1;
+    transform: scale(0.85);
+    transition: none;
+  }
+
+  /* Balao de voz / narracao ao vivo acima da BarraGravacao */
+  .voice-caption {
+    position: absolute;
+    bottom: 66px;
+    left: 50%;
+    z-index: 24;
+    transform: translate(-50%, 10px) scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(16, 18, 23, 0.94);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(43, 217, 168, 0.38);
+    border-radius: 12px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: #F3F5F9;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+    white-space: nowrap;
+    transition: opacity 220ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .voice-caption.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  .voice-wave-lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 16px;
+  }
+  .voice-wave-lg span {
+    width: 3px;
+    border-radius: 99px;
+    background: #2BD9A8;
+    animation: vuWave 520ms var(--ease-in-out) infinite alternate;
+  }
+  .voice-wave-lg span:nth-child(1) { height: 6px; animation-delay: 0ms; }
+  .voice-wave-lg span:nth-child(2) { height: 14px; animation-delay: 90ms; }
+  .voice-wave-lg span:nth-child(3) { height: 9px; animation-delay: 180ms; }
+  .voice-wave-lg span:nth-child(4) { height: 16px; animation-delay: 60ms; }
+  .voice-wave-lg span:nth-child(5) { height: 11px; animation-delay: 240ms; }
+  .voice-wave-lg span:nth-child(6) { height: 15px; animation-delay: 130ms; }
+  .voice-wave-lg span:nth-child(7) { height: 7px; animation-delay: 210ms; }
+
+  /* HUD Rolavel + BarraGravacao MP4 com Voz */
+  .scroll-hud, .rec-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    z-index: 24;
+    transform: translate(-50%, 14px) scale(0.95);
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(22, 22, 26, 0.96);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.65);
+    transition: opacity 240ms var(--ease-out), transform 280ms var(--ease-out);
+  }
+  .scroll-hud.visible, .rec-bar.visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+    pointer-events: auto;
+  }
+  .scroll-hud strong { color: #2BD9A8; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .rec-bar { padding: 6px 8px 6px 14px; }
+  .rec-live-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #FF5C61;
+    animation: recPulse 1.2s var(--ease-in-out) infinite;
+  }
+  .rec-timer { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .mic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(43, 217, 168, 0.16);
+    border: 1px solid rgba(43, 217, 168, 0.36);
+    color: #7DF5D2;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .vu-bars { display: inline-flex; align-items: center; gap: 2px; height: 12px; }
+  .vu-bars span {
+    width: 2.5px;
+    border-radius: 99px;
+    background: #2BD9A8;
+    animation: vuWave 600ms var(--ease-in-out) infinite alternate;
+  }
+  .vu-bars span:nth-child(1) { height: 4px; animation-delay: 0ms; }
+  .vu-bars span:nth-child(2) { height: 11px; animation-delay: 130ms; }
+  .vu-bars span:nth-child(3) { height: 7px; animation-delay: 260ms; }
+  .vu-bars span:nth-child(4) { height: 12px; animation-delay: 80ms; }
+  @keyframes vuWave { from { transform: scaleY(0.32); } to { transform: scaleY(1); } }
+
+  .osd-key {
+    position: absolute;
+    top: 42px;
+    right: 20px;
+    z-index: 26;
+    padding: 6px 12px;
+    border-radius: 9px;
+    background: rgba(20, 20, 24, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 650;
+    color: #FFFFFF;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transform: translateY(-6px) scale(0.95);
+    transition: opacity 180ms var(--ease-out), transform 200ms var(--ease-out);
+    pointer-events: none;
+  }
+  .osd-key.visible { opacity: 1; transform: translateY(0) scale(1); }
+
+  .sim-cursor {
+    position: absolute;
+    z-index: 28;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    left: 0;
+    top: 0;
+    transform: translate(320px, 210px);
+    transition: transform 620ms var(--ease-in-out);
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
+  }
+
+  /* Balaozinho interativo */
+  .tooltip-bubble {
+    position: absolute;
+    z-index: 40;
+    width: 252px;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: #121317;
+    color: #F3F5F9;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.68);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(0.95);
+    transform-origin: var(--ox, 50%) var(--oy, 100%);
+    transition: opacity 150ms var(--ease-out), transform 170ms var(--ease-out);
+  }
+  .tooltip-bubble.open { opacity: 1; transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(1); }
+  .tooltip-bubble.instant { transition: transform 110ms var(--ease-out), opacity 90ms ease; }
+  .tt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .tt-title { font-size: 12.5px; font-weight: 650; color: #FFFFFF; }
+  .tt-kbd {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: rgba(43, 217, 168, 0.16);
+    color: #7DF5D2;
+    white-space: nowrap;
+  }
+  .tt-desc { margin: 0; font-size: 12px; line-height: 1.48; color: rgba(232, 237, 245, 0.80); }
+
+  /* ==========================================================================
+     Secoes
+     ========================================================================== */
+  section { padding: 80px 0; border-top: 1px solid var(--border); }
+  .section-head { max-width: 680px; margin-bottom: 42px; }
+  .eyebrow {
+    font-size: 12.5px;
+    font-weight: 660;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  h2 {
+    margin: 0;
+    font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+    font-weight: 710;
+    letter-spacing: -0.028em;
+    line-height: 1.14;
+  }
+  .section-lead { margin: 12px 0 0; max-width: 64ch; color: var(--fg-secondary); font-size: 15.5px; }
+
+  /* ==========================================================================
+     RECURSOS: Cards com mini-palcos animados sob medida
+     ========================================================================== */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px 22px;
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: border-color 180ms ease, transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+  }
+  .feat-stage {
+    height: 112px;
+    border-radius: 12px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 660;
+    letter-spacing: -0.015em;
+  }
+  .feature-card p {
+    margin: 0;
+    font-size: 14.2px;
+    line-height: 1.56;
+    color: var(--fg-secondary);
+  }
+  .new-tag {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 5px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    vertical-align: middle;
+  }
+
+  /* 1. Animacao Microfone + Ondas de Voz */
+  .anim-mic {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-xs);
+  }
+  .anim-mic-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--rec);
+    animation: recPulse 1.6s var(--ease-in-out) infinite;
+  }
+  @keyframes recPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229, 72, 77, 0.45); }
+    50% { box-shadow: 0 0 0 7px rgba(229, 72, 77, 0); }
+  }
+  .anim-eq { display: flex; align-items: center; gap: 3px; height: 22px; }
+  .anim-eq span {
+    width: 3.5px;
+    border-radius: 99px;
+    background: var(--accent);
+    animation: eqBar 900ms var(--ease-in-out) infinite alternate;
+  }
+  .anim-eq span:nth-child(1) { height: 8px; animation-delay: 0ms; }
+  .anim-eq span:nth-child(2) { height: 20px; animation-delay: 140ms; }
+  .anim-eq span:nth-child(3) { height: 13px; animation-delay: 280ms; }
+  .anim-eq span:nth-child(4) { height: 22px; animation-delay: 90ms; }
+  .anim-eq span:nth-child(5) { height: 10px; animation-delay: 210ms; }
+  @keyframes eqBar { from { transform: scaleY(0.32); } to { transform: scaleY(1); } }
+
+  /* 2. Animacao Selecao com Mira */
+  .anim-crop-box {
+    width: 128px;
+    height: 66px;
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    background: var(--accent-soft);
+    position: relative;
+    animation: cropBreath 3.2s var(--ease-in-out) infinite;
+  }
+  @keyframes cropBreath {
+    0%, 100% { transform: scale(0.92); }
+    50% { transform: scale(1.02); }
+  }
+  .anim-crop-tag {
+    position: absolute;
+    top: -11px;
+    left: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: #FFFFFF;
+  }
+  [data-theme="dark"] .anim-crop-tag { color: #062118; }
+  .anim-cross {
+    position: absolute;
+    right: -9px;
+    bottom: -9px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  /* 3. Animacao Seta + Pixelar */
+  .anim-annot {
+    width: 168px;
+    height: 70px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    padding: 10px 12px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .anim-secret-bar {
+    height: 16px;
+    width: 96px;
+    border-radius: 4px;
+    background-image:
+      linear-gradient(90deg, rgba(148, 163, 184, 0.55) 50%, rgba(203, 213, 225, 0.7) 50%),
+      linear-gradient(rgba(100, 116, 139, 0.45) 50%, rgba(226, 232, 240, 0.6) 50%);
+    background-size: 7px 7px;
+    animation: pixelShift 2.6s var(--ease-in-out) infinite;
+  }
+  @keyframes pixelShift {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+  .anim-arrow-draw {
+    stroke-dasharray: 80;
+    animation: arrowLoop 2.8s var(--ease-out) infinite;
+  }
+  @keyframes arrowLoop {
+    0% { stroke-dashoffset: 80; }
+    45%, 85% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 80; }
+  }
+
+  /* 4. Animacao Captura Rolavel */
+  .anim-scroll-frame {
+    width: 120px;
+    height: 80px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    overflow: hidden;
+    padding: 8px;
+    position: relative;
+  }
+  .anim-scroll-inner {
+    display: grid;
+    gap: 6px;
+    animation: miniScroll 3.6s var(--ease-in-out) infinite;
+  }
+  .anim-scroll-inner span {
+    height: 9px;
+    border-radius: 3px;
+    background: var(--border-strong);
+    display: block;
+  }
+  .anim-scroll-inner span.a { background: var(--accent-soft); border: 1px solid var(--accent); height: 14px; }
+  @keyframes miniScroll {
+    0%, 15% { transform: translateY(0); }
+    55%, 75% { transform: translateY(-42px); }
+    100% { transform: translateY(0); }
+  }
+
+  /* 5. Animacao Pilha de Abas (estilo Sonner) */
+  .anim-stack { position: relative; width: 152px; height: 64px; }
+  .anim-stack-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 44px;
+    border-radius: 9px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--fg-secondary);
+    transition: transform 280ms var(--ease-out), opacity 240ms ease;
+  }
+  .anim-stack-card:nth-child(1) { top: 0; transform: scale(0.90) translateY(0); opacity: 0.55; }
+  .anim-stack-card:nth-child(2) { top: 8px; transform: scale(0.95) translateY(0); opacity: 0.8; }
+  .anim-stack-card:nth-child(3) { top: 16px; transform: scale(1) translateY(0); color: var(--fg); font-weight: 600; }
+
+  /* 6. Animacao Escudo MIT Offline */
+  .anim-shield {
+    width: 62px;
+    height: 62px;
+    border-radius: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    box-shadow: var(--shadow-sm);
+    animation: shieldFloat 3.4s var(--ease-in-out) infinite;
+  }
+  @keyframes shieldFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  /* ==========================================================================
+     ATALHOS: Teclado Tatil Interativo 3D
+     ========================================================================== */
+  .kbd-showcase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .kbd-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 18px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .kbd-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--fg);
+    font-weight: 560;
+  }
+  .kbd-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .kbd-hint { font-size: 12.5px; color: var(--fg-muted); }
+
+  .keycap-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .keycap-btn {
+    text-align: left;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-strong);
+    border-bottom: 4px solid var(--border-strong);
+    border-radius: 13px;
+    padding: 14px 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--fg);
+    font-family: inherit;
+    transition: transform 140ms var(--ease-out), border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  }
+  .keycap-btn:active, .keycap-btn.pressed {
+    transform: translateY(3px) scale(0.985);
+    border-bottom-width: 1px;
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .keycap-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .keycap-pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 7px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    box-shadow: 0 2px 0 var(--border-strong);
+    color: var(--fg);
+  }
+  .keycap-btn.pressed .keycap-pill {
+    background: var(--accent);
+    color: #FFFFFF;
+    border-color: var(--accent);
+  }
+  [data-theme="dark"] .keycap-btn.pressed .keycap-pill { color: #062118; }
+  .keycap-label { font-size: 14px; font-weight: 620; letter-spacing: -0.01em; }
+  .keycap-sub { font-size: 12.5px; color: var(--fg-secondary); line-height: 1.4; }
+
+  /* ==========================================================================
+     INSTALACAO: 1-Clique + Terminal Animado de Instalacao Flatpak
+     ========================================================================== */
+  .install-grid {
+    display: grid;
+    grid-template-columns: 0.92fr 1.28fr;
+    gap: 20px;
+    align-items: stretch;
+  }
+  .install-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+    box-shadow: var(--shadow-xs);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .install-panel h3 { margin: 0 0 8px; font-size: 18px; font-weight: 660; letter-spacing: -0.02em; }
+  .install-panel p { margin: 0; font-size: 14.5px; color: var(--fg-secondary); }
+
+  .code-block {
+    position: relative;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 44px 11px 13px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--fg);
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--fg-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 150ms var(--ease-out), border-color 150ms ease, color 150ms ease;
+  }
+  .copy-btn:active { transform: scale(0.93); }
+
+  /* Terminal Linux Animado */
+  .term-card {
+    border-radius: var(--radius-lg);
+    background: #121317;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #E6E9F0;
+  }
+  .term-head {
+    height: 40px;
+    padding: 0 14px;
+    background: #1A1C22;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .term-dots { display: flex; gap: 6px; }
+  .term-dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .term-dots i:nth-child(1) { background: #FF5F56; }
+  .term-dots i:nth-child(2) { background: #FFBD2E; }
+  .term-dots i:nth-child(3) { background: #27C93F; }
+  .term-title { font-family: var(--font-mono); font-size: 11.5px; color: rgba(255, 255, 255, 0.56); }
+  .term-actions { display: flex; align-items: center; gap: 6px; }
+  .term-mini-btn {
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #E6E9F0;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 560;
+    cursor: pointer;
+    transition: transform 150ms var(--ease-out), background-color 150ms ease;
+  }
+  .term-mini-btn:active { transform: scale(0.95); }
+
+  .term-body {
+    flex: 1;
+    padding: 18px 20px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .term-prompt { color: #2BD9A8; font-weight: 700; }
+  .term-cmd { color: #FFFFFF; word-break: break-all; }
+  .term-log { display: grid; gap: 5px; font-size: 12px; color: rgba(230, 233, 240, 0.72); }
+  .term-line {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+  }
+  .term-line.show { opacity: 1; transform: translateY(0); }
+  .term-progress-wrap {
+    margin-top: 6px;
+    display: grid;
+    gap: 6px;
+  }
+  .term-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: rgba(230, 233, 240, 0.80);
+    font-variant-numeric: tabular-nums;
+  }
+  .term-bar-bg {
+    height: 7px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.10);
+    overflow: hidden;
+  }
+  .term-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #0D966E, #2BD9A8);
+    transition: width 320ms var(--ease-out);
+  }
+  .term-done {
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: rgba(43, 217, 168, 0.12);
+    border: 1px solid rgba(43, 217, 168, 0.32);
+    color: #7DF5D2;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .term-done.show { opacity: 1; transform: translateY(0); }
+
+  /* ==========================================================================
+     ROADMAP
+     ========================================================================== */
+  .roadmap-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .road-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .road-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .road-ver { font-family: var(--font-mono); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .status-pill { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .status-done { background: var(--accent-soft); color: var(--accent); }
+  .status-next { background: var(--bg-subtle); color: var(--fg); border: 1px solid var(--border-strong); }
+  .status-plan { background: var(--bg-subtle); color: var(--fg-muted); }
+  .road-card h3 { margin: 0; font-size: 16px; font-weight: 660; letter-spacing: -0.015em; }
+  .road-card p { margin: 0; font-size: 14px; line-height: 1.58; color: var(--fg-secondary); }
+
+  /* ==========================================================================
+     FAQ EM LARGURA TOTAL (100% do container!)
+     ========================================================================== */
+  .faq-list {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+  }
+  .faq-item {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+  .faq-trigger {
+    width: 100%;
+    padding: 18px 22px;
+    background: transparent;
+    border: 0;
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 15.5px;
+    font-weight: 620;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+  .faq-chevron {
+    width: 18px;
+    height: 18px;
+    color: var(--fg-muted);
+    flex-shrink: 0;
+    transition: transform 240ms var(--ease-drawer), color 180ms ease;
+  }
+  .faq-item[data-open="true"] .faq-chevron { transform: rotate(180deg); color: var(--accent); }
+  .faq-content { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 260ms var(--ease-drawer); }
+  .faq-item[data-open="true"] .faq-content { grid-template-rows: 1fr; }
+  .faq-inner { overflow: hidden; }
+  .faq-inner p {
+    margin: 0;
+    padding: 0 22px 18px;
+    font-size: 14.8px;
+    line-height: 1.65;
+    color: var(--fg-secondary);
+  }
+
+  /* Assinatura / Portfolio */
+  .author-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 28px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+  }
+  .author-info { display: flex; align-items: center; gap: 16px; }
+  .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    flex-shrink: 0;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 750;
+    font-size: 16px;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+  }
+  .author-info h3 { margin: 0 0 3px; font-size: 17px; font-weight: 660; letter-spacing: -0.015em; }
+  .author-info p { margin: 0; font-size: 14px; color: var(--fg-secondary); max-width: 56ch; }
+  .author-links { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  footer {
+    padding: 32px 0 48px;
+    border-top: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--fg-muted);
+  }
+  .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .footer-links { display: flex; align-items: center; gap: 18px; }
+
+  /* Sonner Toaster */
+  .sonner-toaster {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .sonner-toast {
+    pointer-events: auto;
+    min-width: 260px;
+    max-width: 360px;
+    padding: 12px 15px;
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--fg);
+    border: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-popover);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13.5px;
+    font-weight: 540;
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    transition: transform 360ms ease, opacity 320ms ease;
+  }
+  .sonner-toast.mounted { opacity: 1; transform: translateY(0) scale(1); }
+  .sonner-toast.leaving { opacity: 0; transform: translateY(10px) scale(0.96); }
+  .sonner-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+  /* Hover states protegidos */
+  @media (hover: hover) and (pointer: fine) {
+    .nav-links a:hover { color: var(--fg); background: var(--bg-subtle); }
+    .icon-btn:hover, .play-btn:hover, .copy-btn:hover { border-color: var(--border-strong); color: var(--fg); background: var(--surface-hover); }
+    .btn-primary:hover { opacity: 0.92; box-shadow: var(--shadow-md); }
+    .btn-secondary:hover { background: var(--surface-hover); border-color: var(--fg-muted); }
+    .hero-meta a:hover { color: var(--accent); border-color: var(--accent); }
+    .cap-ico:hover, .cap-timer-btn:hover { background: rgba(255, 255, 255, 0.09); color: #FFFFFF; }
+    .cap-capture-cta:hover { background: #3FE4B5; }
+    .term-mini-btn:hover { background: rgba(255, 255, 255, 0.14); }
+    .feature-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+    .feature-card:hover .anim-stack-card:nth-child(1) { transform: scale(0.95) translateY(-10px); opacity: 0.9; }
+    .feature-card:hover .anim-stack-card:nth-child(2) { transform: scale(0.98) translateY(-4px); opacity: 0.95; }
+    .feature-card:hover .anim-stack-card:nth-child(3) { transform: scale(1) translateY(4px); }
+    .keycap-btn:hover { border-color: var(--accent); background: var(--surface); }
+    .faq-item:hover { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+    .footer-links a:hover { color: var(--fg); }
+  }
+
+  @media (max-width: 920px) {
+    .features-grid, .roadmap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .keycap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .install-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 48px 0 28px; }
+    .features-grid, .roadmap-grid, .keycap-grid { grid-template-columns: 1fr; }
+    .linux-screen { aspect-ratio: auto; min-height: 460px; }
+    .segmented { width: 100%; overflow-x: auto; }
+    .hint-pill { display: none; }
+    .cap-header { overflow-x: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .choreo { animation: fadeOnly 200ms ease both; animation-delay: 0ms; }
+    @keyframes fadeOnly { from { opacity: 0; } to { opacity: 1; } }
+    .vu-bars span, .anim-eq span, .anim-mic-dot, .anim-crop-box, .anim-secret-bar, .anim-arrow-draw, .anim-scroll-inner, .anim-shield { animation: none; }
+    .seg-indicator, .capture-win, .target-app, .select-box, .sim-cursor, .scroll-sheet, .faq-content { transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="#topo" aria-label="Capture, início">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+        <defs>
+          <linearGradient id="capBg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2A2A2D"/>
+            <stop offset="1" stop-color="#161618"/>
+          </linearGradient>
+        </defs>
+        <rect x="24" y="24" width="464" height="464" rx="100" fill="url(#capBg)"/>
+        <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+          <rect x="104" y="104" width="236" height="236" rx="30" fill="#F7F7F8" fill-opacity="0.10" stroke="#F7F7F8" stroke-width="30" stroke-linecap="round" stroke-dasharray="74 56" stroke-dashoffset="37"/>
+          <g stroke="#2BD9A8" stroke-width="30" stroke-linecap="round">
+            <line x1="340" y1="276" x2="340" y2="420"/>
+            <line x1="268" y1="348" x2="412" y2="348"/>
+          </g>
+          <circle cx="340" cy="348" r="22" fill="#2BD9A8"/>
+        </g>
+      </svg>
+      <span>Capture</span>
+      <span class="brand-ver">v1.5.1</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Navegação principal">
+      <a href="#recursos">Recursos</a>
+      <a href="#atalhos">Atalhos</a>
+      <a href="#instalar">Instalar</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#faq">Dúvidas</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="icon-btn" id="theme-toggle" type="button" aria-label="Alternar tema claro e escuro" title="Alternar tema">
+        <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+      <a class="btn btn-primary btn-sm" href="#instalar">Baixar grátis</a>
+    </div>
+  </div>
+</header>
+
+<main id="topo">
+  <div class="hero">
+    <div class="container">
+      <div class="hero-header">
+        <div class="hero-meta choreo" style="--d:0ms">
+          <span>Software livre (MIT) para Linux</span>
+          <span>·</span>
+          <span>por <a href="https://kassiobraga.com.br" target="_blank" rel="noopener">Kassio Braga</a></span>
+        </div>
+
+        <h1 class="choreo" style="--d:40ms">
+          Aperte Print. <span class="hl">Selecione.</span> Pronto.
+        </h1>
+
+        <p class="hero-lead choreo" style="--d:105ms">
+          Captura de tela instantânea, anotações rápidas, páginas roláveis e gravação de vídeo MP4 com voz do microfone. Tudo nativo em GTK 4, leve e sem anúncios.
+        </p>
+
+        <div class="hero-cta choreo" style="--d:155ms">
+          <a class="btn btn-primary" href="io.github.kassiobraga.Capture.flatpakref">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Instalar no Linux (Flatpak)
+          </a>
+          <a class="btn btn-secondary" href="https://github.com/kassiobraga/capture" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+            </svg>
+            Código no GitHub
+          </a>
+        </div>
+
+        <p class="hero-footnote choreo" style="--d:195ms">
+          Versão 1.5.1 · Linux Mint, Ubuntu, Fedora, Pop!_OS e derivados · Atualização automática
+        </p>
+      </div>
+
+      <!-- SIMULADOR LINUX FIEL AO APP REAL -->
+      <div class="stage-shell choreo" style="--d:220ms" aria-label="Demonstração interativa fiel ao Capture 1.5.1">
+        <div class="scene-bar">
+          <div class="segmented" role="tablist" aria-label="Cenas da demonstração" id="scene-tabs">
+            <div class="seg-indicator" id="seg-indicator" aria-hidden="true"></div>
+            <button class="seg-btn" role="tab" aria-selected="true" data-scene="0" type="button">
+              <span class="seg-num">1</span> Print e seleção
+            </button>
+            <button class="seg-btn" role="tab" aria-selected="false" data-scene="1" type="button">
+              <span class="seg-num">2</span> Anotar e pixelar
+            </button>
+            <button class="seg-btn" role="tab" aria-selected="false" data-scene="2" type="button">
+              <span class="seg-num">3</span> Página rolável
+            </button>
+            <button class="seg-btn" role="tab" aria-selected="false" data-scene="3" type="button">
+              <span class="seg-num">4</span> MP4 com voz
+            </button>
+          </div>
+
+          <div class="stage-controls">
+            <span class="hint-pill">Passe o mouse nos botões do Capture</span>
+            <button class="play-btn" id="toggle-play" type="button" aria-pressed="false">
+              <svg id="play-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <rect x="6" y="4" width="4" height="16" rx="1"/>
+                <rect x="14" y="4" width="4" height="16" rx="1"/>
+              </svg>
+              <span id="play-label">Pausar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="linux-screen" id="linux-screen">
+          <div class="linux-wallpaper"></div>
+
+          <div class="gnome-panel">
+            <div class="gnome-left">
+              <span class="gnome-pill"></span>
+              <span>Atividades</span>
+              <span style="opacity:.48">Capture 1.5.1</span>
+            </div>
+            <div class="tabular">qui 14:28</div>
+            <div class="gnome-right">
+              <span class="gnome-dot" title="Microfone pronto"></span>
+              <span>PT-BR</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <div class="scene-progress-track">
+            <div class="scene-progress-fill" id="scene-progress"></div>
+          </div>
+
+          <div class="osd-key" id="osd-key">Print</div>
+          <div class="capture-flash" id="capture-flash"></div>
+
+          <div class="desktop-area">
+            <!-- Janela de fundo fiel ao print real (barra azul-ardosia + 3 bolinhas + grafico) -->
+            <div class="target-app" id="target-app">
+              <div class="target-chrome">
+                <i class="t-dot r"></i><i class="t-dot y"></i><i class="t-dot g"></i>
+              </div>
+              <div class="target-body">
+                <div class="scroll-sheet" id="scroll-sheet">
+                  <div class="mock-top-grid">
+                    <div class="mock-lines">
+                      <div class="ml" style="width:82%"></div>
+                      <div class="ml" style="width:94%"></div>
+                      <div class="ml" style="width:100%"></div>
+                      <div class="ml" style="width:74%"></div>
+                    </div>
+                    <div class="mock-cta-blue"></div>
+                  </div>
+                  <div class="mock-bottom-grid">
+                    <div class="mock-lines">
+                      <div class="ml" style="width:88%"></div>
+                      <div class="ml" style="width:65%"></div>
+                    </div>
+                    <div class="mock-bars">
+                      <span style="height:44%"></span>
+                      <span style="height:78%"></span>
+                      <span style="height:56%"></span>
+                      <span style="height:98%"></span>
+                      <span style="height:82%"></span>
+                    </div>
+                  </div>
+                  <div class="mock-extra-card">
+                    <div class="ml" style="width:45%"></div>
+                    <div class="ml" style="width:90%"></div>
+                    <div class="ml" style="width:72%"></div>
+                  </div>
+                  <div class="mock-extra-card">
+                    <div class="ml" style="width:58%"></div>
+                    <div class="ml" style="width:84%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Camada de selecao Print -->
+            <div class="select-overlay" id="select-overlay">
+              <div class="select-box" id="select-box">
+                <span class="select-dim">640 × 400 px</span>
+              </div>
+            </div>
+
+            <!-- JANELA REAL DO CAPTURE (fiel ao docs/captura-editor.png) -->
+            <div class="capture-win visible" id="capture-win">
+              <div class="cap-header">
+                <div class="cap-title-left">
+                  <span>Capture</span>
+                  <button class="cap-ico" type="button"
+                    data-tip-title="Histórico de capturas"
+                    data-tip-kbd="Ctrl+H"
+                    data-tip-desc="Reabre prints, páginas roláveis e vídeos MP4 com voz salvos recentemente.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                  </button>
+                  <button class="cap-ico" type="button"
+                    data-tip-title="Sobre o Capture"
+                    data-tip-kbd="Licença MIT"
+                    data-tip-desc="Software livre por Kassio Braga (kassiobraga.com.br) com código aberto no GitHub.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  </button>
+                </div>
+
+                <div class="cap-tools-center">
+                  <button class="cap-ico active" id="btn-mode-ret" type="button"
+                    data-tip-title="Retângulo"
+                    data-tip-kbd="Print"
+                    data-tip-desc="Congela a tela inteira e recorta a área desejada com precisão.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>
+                  </button>
+                  <button class="cap-ico" id="btn-mode-win" type="button"
+                    data-tip-title="Janela"
+                    data-tip-kbd="Clique"
+                    data-tip-desc="Captura uma janela inteira do sistema com um clique.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><line x1="4" y1="9" x2="20" y2="9"/></svg>
+                  </button>
+                  <button class="cap-ico" id="btn-mode-full" type="button"
+                    data-tip-title="Tela cheia"
+                    data-tip-kbd="Monitor"
+                    data-tip-desc="Captura todo o monitor instantaneamente.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V5h4M16 5h4v4M20 15v4h-4M8 19H4v-4"/></svg>
+                  </button>
+                  <button class="cap-ico" id="btn-mode-scroll" type="button"
+                    data-tip-title="Captura rolável"
+                    data-tip-kbd="Rolar"
+                    data-tip-desc="Costura páginas compridas em uma única imagem vertical contínua.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="3" width="12" height="18" rx="2"/><polyline points="9 13 12 16 15 13"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+                  </button>
+                  <button class="cap-timer-btn" type="button"
+                    data-tip-title="Atraso antes do print"
+                    data-tip-kbd="0s · 3s · 5s"
+                    data-tip-desc="Adicione segundos de espera para abrir menus antes da captura.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                    0s
+                  </button>
+                  <button class="cap-rec-pill" id="btn-mode-rec" type="button"
+                    data-tip-title="Gravar MP4 com voz ou GIF"
+                    data-tip-kbd="Ctrl+G"
+                    data-tip-desc="Grava a região em MP4 narrado com o microfone (PulseAudio/PipeWire) ou GIF.">
+                    <span class="cap-rec-dot"></span> REC
+                  </button>
+                </div>
+
+                <div class="cap-right">
+                  <button class="cap-ico" id="btn-copy-shot" type="button"
+                    data-tip-title="Copiar captura"
+                    data-tip-kbd="Ctrl+C"
+                    data-tip-desc="Copia a imagem com todas as anotações para colar em qualquer app.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                  </button>
+                  <button class="cap-ico" id="btn-save-shot" type="button"
+                    data-tip-title="Salvar PNG"
+                    data-tip-kbd="Ctrl+S"
+                    data-tip-desc="Salva em Imagens/Capture ou no local que você escolher.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  </button>
+                  <button class="cap-capture-cta" type="button"
+                    data-tip-title="Nova captura"
+                    data-tip-kbd="Print"
+                    data-tip-desc="Inicia uma nova captura imediatamente no modo escolhido.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3" stroke-dasharray="5 3"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+                    Capturar
+                  </button>
+                  <div class="cap-win-ctrls" aria-hidden="true">
+                    <span>&minus;</span>
+                    <span>□</span>
+                    <span class="cap-close-mint">×</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Canvas real do editor -->
+              <div class="cap-body">
+                <div class="real-shot">
+                  <svg class="real-shot-svg" viewBox="0 0 640 310" preserveAspectRatio="xMidYMid meet" aria-label="Captura de exemplo sendo anotada no Capture">
+                    <defs>
+                      <pattern id="pixelPat" width="10" height="10" patternUnits="userSpaceOnUse">
+                        <rect width="5" height="5" fill="#94A3B8"/>
+                        <rect x="5" width="5" height="5" fill="#CBD5E1"/>
+                        <rect y="5" width="5" height="5" fill="#64748B"/>
+                        <rect x="5" y="5" width="5" height="5" fill="#94A3B8"/>
+                      </pattern>
+                    </defs>
+
+                    <!-- Fundo da janela capturada -->
+                    <rect x="0" y="0" width="640" height="310" fill="#F4F7FC"/>
+                    <!-- Barra superior azul-ardosia -->
+                    <rect x="0" y="0" width="640" height="36" fill="#3B547B"/>
+                    <circle cx="22" cy="18" r="6" fill="#EA6662"/>
+                    <circle cx="42" cy="18" r="6" fill="#F5C350"/>
+                    <circle cx="62" cy="18" r="6" fill="#67C57D"/>
+
+                    <!-- Marca-texto amarelo sob a primeira linha -->
+                    <rect id="hl-mark" class="hl-rect" x="28" y="56" width="286" height="20" rx="3" fill="#F6CE46" fill-opacity="0.58"/>
+
+                    <!-- Linhas cinzas do documento -->
+                    <rect x="34" y="61" width="268" height="10" rx="3" fill="#B8C2D1"/>
+                    <rect x="34" y="84" width="322" height="10" rx="3" fill="#B8C2D1"/>
+                    <rect x="34" y="107" width="342" height="10" rx="3" fill="#B8C2D1"/>
+                    <rect x="34" y="130" width="256" height="10" rx="3" fill="#B8C2D1"/>
+                    <rect x="34" y="153" width="302" height="10" rx="3" fill="#B8C2D1"/>
+
+                    <!-- Botao azul no canto superior direito -->
+                    <rect x="424" y="60" width="174" height="44" rx="6" fill="#3B8AE0"/>
+
+                    <!-- Grafico de barras no canto inferior direito -->
+                    <rect x="412" y="228" width="26" height="56" rx="2" fill="#8E9EB7"/>
+                    <rect x="450" y="182" width="26" height="102" rx="2" fill="#8E9EB7"/>
+                    <rect x="488" y="210" width="26" height="74" rx="2" fill="#8E9EB7"/>
+                    <rect x="526" y="158" width="26" height="126" rx="2" fill="#8E9EB7"/>
+                    <rect x="564" y="176" width="26" height="108" rx="2" fill="#8E9EB7"/>
+
+                    <!-- Linha com dado sensivel (API_KEY) + mascara pixelada -->
+                    <text x="34" y="232" fill="#475569" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" font-weight="600">API_KEY: sk_live_9481a7b2c0</text>
+                    <g id="pixel-box" class="pixel-group">
+                      <rect x="102" y="216" width="168" height="22" rx="4" fill="url(#pixelPat)" stroke="#475569" stroke-opacity="0.35" stroke-width="1"/>
+                    </g>
+
+                    <!-- Anotacoes fieis ao captura-editor.png -->
+                    <rect id="annot-rect" class="a-stroke" x="412" y="49" width="198" height="66" rx="10" fill="none" stroke="#D94214" stroke-width="4"/>
+                    <path id="annot-arrow" class="a-stroke" d="M294 176 L410 100" fill="none" stroke="#D94214" stroke-width="4" stroke-linecap="round"/>
+                    <path id="annot-head" class="a-stroke" d="M393 98 L412 99 L404 116" fill="none" stroke="#D94214" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <text id="annot-text" class="a-text" x="234" y="204" fill="#E11D2E" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="22">clique aqui</text>
+                    <path id="annot-pen" class="a-stroke" d="M36 268 L108 284 L176 264 L244 282" fill="none" stroke="#E11D2E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+
+                <div class="dim-pill">640 × 400 px</div>
+
+                <!-- Dock flutuante centralizado real -->
+                <div class="floating-dock">
+                  <button class="cap-ico active" id="tool-pen" type="button"
+                    data-tip-title="Caneta livre"
+                    data-tip-kbd="P"
+                    data-tip-desc="Desenhe traços livres rápidos direto sobre a imagem.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  </button>
+                  <button class="cap-ico" id="tool-hl" type="button"
+                    data-tip-title="Marca-texto"
+                    data-tip-kbd="M"
+                    data-tip-desc="Grife trechos importantes em amarelo translúcido sem esconder o texto.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+                  </button>
+                  <button class="cap-ico" id="tool-blur" type="button"
+                    data-tip-title="Pixelar dados sensíveis"
+                    data-tip-kbd="B"
+                    data-tip-desc="Oculte senhas, tokens, e-mails ou CPFs com mosaico irreversível.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><rect x="14" y="14" width="6" height="6"/></svg>
+                  </button>
+                  <button class="cap-ico" id="tool-arrow" type="button"
+                    data-tip-title="Setas e formas"
+                    data-tip-kbd="A · R"
+                    data-tip-desc="Desenhe setas, retângulos e elipses para destacar exatamente onde clicar.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="18" x2="18" y2="6"/><polyline points="10 6 18 6 18 14"/></svg>
+                  </button>
+                  <button class="cap-ico" id="tool-text" type="button"
+                    data-tip-title="Texto"
+                    data-tip-kbd="T"
+                    data-tip-desc="Adicione legendas nítidas e legíveis em qualquer ponto do print.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                  </button>
+                  <button class="cap-ico" type="button"
+                    data-tip-title="Recortar"
+                    data-tip-kbd="C"
+                    data-tip-desc="Ajuste o enquadramento final da captura sem precisar refazer o print.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg>
+                  </button>
+                  <span class="dock-div"></span>
+                  <button class="color-swatch" type="button" aria-label="Cor do traço"
+                    data-tip-title="Cor e espessura"
+                    data-tip-kbd="Paleta"
+                    data-tip-desc="Escolha rapidamente entre vermelho, laranja, verde, azul, amarelo ou branco.">
+                  </button>
+                  <span class="dock-div"></span>
+                  <button class="cap-ico" type="button"
+                    data-tip-title="Desfazer"
+                    data-tip-kbd="Ctrl+Z"
+                    data-tip-desc="Desfaz a última anotação instantaneamente.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+                  </button>
+                  <button class="cap-ico" type="button"
+                    data-tip-title="Refazer"
+                    data-tip-kbd="Ctrl+Y"
+                    data-tip-desc="Refaz o traço desfeito.">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Moldura de gravacao + clique ripple + legenda de voz (Cena 4) -->
+            <div class="rec-frame" id="rec-frame">
+              <span class="rec-frame-tag tabular">REC · MP4 + Áudio AAC</span>
+            </div>
+            <div class="click-ripple" id="click-ripple" aria-hidden="true"></div>
+            <div class="voice-caption" id="voice-caption">
+              <span class="voice-wave-lg" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </span>
+              <span id="voice-text">“Aqui eu clico no botão azul para publicar...”</span>
+            </div>
+
+            <!-- HUD Rolavel -->
+            <div class="scroll-hud" id="scroll-hud">
+              <span>Capturando página rolável</span>
+              <strong id="scroll-count">1 quadro · 920 × 840 px</strong>
+            </div>
+
+            <!-- Barra flutuante de Gravacao MP4 com voz -->
+            <div class="rec-bar" id="rec-bar">
+              <span class="rec-live-dot"></span>
+              <span class="rec-timer" id="rec-timer">00:01</span>
+              <span class="mic-badge"
+                data-tip-title="Microfone ativo no MP4"
+                data-tip-kbd="AAC · 128k"
+                data-tip-desc="Grava sua voz direto no vídeo via PulseAudio ou PipeWire. Sem microfone, grava vídeo puro sem falhar.">
+                Microfone ativo
+                <span class="vu-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+              </span>
+              <button class="cap-rec-pill" style="height:26px" type="button"
+                data-tip-title="Parar gravação"
+                data-tip-kbd="Esc"
+                data-tip-desc="Finaliza o MP4 e salva automaticamente no histórico.">
+                Parar
+              </button>
+            </div>
+          </div>
+
+          <svg class="sim-cursor" id="sim-cursor" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 3l14 10-6.2 1.2L9.5 21 5 3z" fill="#FFFFFF" stroke="#0A0C10" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+
+          <div class="tooltip-bubble" id="tooltip-bubble" role="tooltip" aria-hidden="true">
+            <div class="tt-head">
+              <span class="tt-title" id="tt-title"></span>
+              <span class="tt-kbd" id="tt-kbd"></span>
+            </div>
+            <p class="tt-desc" id="tt-desc"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECURSOS COM MINI-PALCOS ANIMADOS -->
+  <section id="recursos">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Feito para o dia a dia</div>
+        <h2>Tudo o que você faz depois de apertar Print</h2>
+        <p class="section-lead">
+          Sem menus escondidos, sem conta obrigatória e sem travar. O Capture abre na hora, respeita o tema claro ou escuro do seu sistema e entrega o arquivo pronto.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-mic">
+              <span class="anim-mic-dot"></span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+              <div class="anim-eq"><span></span><span></span><span></span><span></span><span></span></div>
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--fg-secondary)">MP4</span>
+            </div>
+          </div>
+          <div>
+            <h3>MP4 com voz do microfone <span class="new-tag">1.5</span></h3>
+            <p>Grave tutoriais e reporte bugs narrados com áudio AAC via PulseAudio ou PipeWire, indicador ao vivo e fallback seguro para vídeo puro.</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-crop-box">
+              <span class="anim-crop-tag tabular">640 × 400</span>
+              <span class="anim-cross">+</span>
+            </div>
+          </div>
+          <div>
+            <h3>Seleção instantânea</h3>
+            <p>A tela congela no clique para capturar menus flutuantes sem eles sumirem. Ao soltar o mouse, a imagem já está copiada e salva.</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-annot">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div style="height:8px;width:54px;border-radius:3px;background:var(--border-strong)"></div>
+                <div style="height:14px;width:36px;border-radius:4px;background:#3B8AE0"></div>
+              </div>
+              <div class="anim-secret-bar"></div>
+              <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 168 70" fill="none">
+                <path class="anim-arrow-draw" d="M72 52 L116 20" stroke="#E5484D" stroke-width="2.5" stroke-linecap="round"/>
+                <path class="anim-arrow-draw" d="M107 19 L117 19 L113 28" stroke="#E5484D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div>
+            <h3>Anotação e pixelização</h3>
+            <p>Setas, retângulos, texto, marca-texto e caneta livre. Esconda senhas, chaves de API e dados pessoais com a ferramenta de pixelar.</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-scroll-frame">
+              <div class="anim-scroll-inner">
+                <span class="a"></span>
+                <span style="width:85%"></span>
+                <span style="width:65%"></span>
+                <span class="a"></span>
+                <span style="width:92%"></span>
+                <span style="width:74%"></span>
+                <span class="a"></span>
+                <span style="width:80%"></span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>Captura rolável</h3>
+            <p>Capture páginas web compridas, conversas ou planilhas inteiras em um único PNG contínuo, sem precisar emendar prints na mão.</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-stack">
+              <div class="anim-stack-card"><span>deploy-01.png</span><span>14:12</span></div>
+              <div class="anim-stack-card"><span>erro-api.mp4</span><span>Voz</span></div>
+              <div class="anim-stack-card"><span>captura-14h28.png</span><span style="color:var(--accent)">Aberta</span></div>
+            </div>
+          </div>
+          <div>
+            <h3>Abas e histórico local</h3>
+            <p>Trabalhe em várias capturas abertas em abas e reabra facilmente qualquer print ou gravação recente pelo histórico.</p>
+          </div>
+        </article>
+
+        <article class="feature-card">
+          <div class="feat-stage" aria-hidden="true">
+            <div class="anim-shield">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+            </div>
+          </div>
+          <div>
+            <h3>100% offline e aberto</h3>
+            <p>Nenhum dado sai do seu computador. Código aberto sob licença MIT para estudar, adaptar e usar livremente no trabalho ou em casa.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ATALHOS: TECLADO TATIL INTERATIVO -->
+  <section id="atalhos">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Velocidade</div>
+        <h2>Atalhos de teclado sem atraso</h2>
+        <p class="section-lead">
+          Clique nas teclas abaixo ou pressione no seu teclado para testar. No Capture, ações de teclado respondem na hora para acompanhar quem tira dezenas de prints por dia.
+        </p>
+      </div>
+
+      <div class="kbd-showcase">
+        <div class="kbd-status-bar">
+          <div class="kbd-live">
+            <span class="kbd-live-dot"></span>
+            <span id="kbd-readout">Clique em qualquer tecla abaixo para ver o que ela dispara no Capture</span>
+          </div>
+          <span class="kbd-hint">Experimente apertar A, R, T, B ou H no seu teclado</span>
+        </div>
+
+        <div class="keycap-grid" id="keycap-grid">
+          <button class="keycap-btn" type="button" data-key="PrintScreen" data-msg="Print · Congela a tela inteira e inicia a seleção retangular">
+            <div class="keycap-top"><span class="keycap-pill">Print</span></div>
+            <div><div class="keycap-label">Nova captura</div><div class="keycap-sub">Congela e recorta na hora</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="g" data-msg="Ctrl+G · Abre a gravação de região em MP4 com voz ou GIF">
+            <div class="keycap-top"><span class="keycap-pill">Ctrl+G</span></div>
+            <div><div class="keycap-label">Gravar tela + voz</div><div class="keycap-sub">MP4 com microfone ou GIF</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="c" data-msg="Ctrl+C · Copia a imagem já anotada para a área de transferência">
+            <div class="keycap-top"><span class="keycap-pill">Ctrl+C</span></div>
+            <div><div class="keycap-label">Copiar imagem</div><div class="keycap-sub">Pronta para colar em chats</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="s" data-msg="Ctrl+S · Salva em PNG na pasta Imagens/Capture">
+            <div class="keycap-top"><span class="keycap-pill">Ctrl+S</span></div>
+            <div><div class="keycap-label">Salvar arquivo</div><div class="keycap-sub">Exporta em PNG sem perda</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="a" data-msg="A · Seleciona a ferramenta Seta para apontar detalhes">
+            <div class="keycap-top"><span class="keycap-pill">A</span></div>
+            <div><div class="keycap-label">Seta</div><div class="keycap-sub">Aponte exatamente onde olhar</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="r" data-msg="R · Seleciona Retângulo para enquadrar botões e áreas">
+            <div class="keycap-top"><span class="keycap-pill">R</span></div>
+            <div><div class="keycap-label">Retângulo</div><div class="keycap-sub">Destaque blocos com borda</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="b" data-msg="B · Seleciona Pixelar para ocultar senhas, tokens e CPFs">
+            <div class="keycap-top"><span class="keycap-pill">B</span></div>
+            <div><div class="keycap-label">Pixelar</div><div class="keycap-sub">Protege dados sensíveis</div></div>
+          </button>
+
+          <button class="keycap-btn" type="button" data-key="h" data-msg="Ctrl+H · Abre o painel lateral com o histórico de prints e MP4">
+            <div class="keycap-top"><span class="keycap-pill">Ctrl+H</span></div>
+            <div><div class="keycap-label">Histórico</div><div class="keycap-sub">Reabra capturas e vídeos</div></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALAR COM TERMINAL ANIMADO -->
+  <section id="instalar">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Instalação</div>
+        <h2>Pronto em menos de um minuto</h2>
+        <p class="section-lead">
+          Distribuído em Flatpak direto pelo GitHub Pages, com atualizações automáticas sempre que sair uma versão nova.
+        </p>
+      </div>
+
+      <div class="install-grid">
+        <div class="install-panel">
+          <div>
+            <h3>Instalar com 1 clique</h3>
+            <p>Baixe o instalador Flatpak e abra pela loja de aplicativos do seu Linux (Linux Mint, Fedora, Pop!_OS ou GNOME Software).</p>
+            <div style="margin-top:16px">
+              <a class="btn btn-primary" href="io.github.kassiobraga.Capture.flatpakref" style="width:100%">
+                Baixar Capture 1.5.1 (.flatpakref)
+              </a>
+            </div>
+            <p style="font-size:12.5px;color:var(--fg-muted);margin-top:10px">
+              No Ubuntu, instale o suporte antes: <code>sudo apt install flatpak</code>
+            </p>
+          </div>
+
+          <div style="padding-top:16px;border-top:1px solid var(--border)">
+            <h3 style="font-size:15.5px;margin-bottom:6px">Associar à tecla Print</h3>
+            <p style="font-size:13.5px">Crie um atalho personalizado nas configurações de teclado apontando para:</p>
+            <div class="code-block">
+              <code id="cmd-print">flatpak run io.github.kassiobraga.Capture --novo</code>
+              <button class="copy-btn" type="button" data-copy="cmd-print" aria-label="Copiar comando da tecla Print" title="Copiar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Linux animado mostrando o flatpak install -->
+        <div class="term-card" id="term-card">
+          <div class="term-head">
+            <div class="term-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+            <span class="term-title">bash · instalação Flatpak</span>
+            <div class="term-actions">
+              <button class="term-mini-btn" id="btn-replay-install" type="button">Rever</button>
+              <button class="term-mini-btn" type="button" data-copy="cmd-install">Copiar</button>
+            </div>
+          </div>
+          <div class="term-body">
+            <div>
+              <div>
+                <span class="term-prompt">$</span>
+                <span class="term-cmd" id="cmd-install">flatpak install --user https://kassiobraga.github.io/capture/io.github.kassiobraga.Capture.flatpakref</span>
+              </div>
+              <div class="term-log" style="margin-top:12px">
+                <div class="term-line" id="tl-1">Verificando assinatura GPG do repositório capture...</div>
+                <div class="term-line" id="tl-2">Baixando io.github.kassiobraga.Capture/x86_64/stable (1.5.1)</div>
+                <div class="term-line" id="tl-3">Habilitando captura de microfone (PulseAudio / PipeWire)...</div>
+              </div>
+              <div class="term-progress-wrap">
+                <div class="term-progress-meta">
+                  <span id="term-stage-label">Preparando instalação...</span>
+                  <span id="term-pct">0%</span>
+                </div>
+                <div class="term-bar-bg">
+                  <div class="term-bar-fill" id="term-bar-fill"></div>
+                </div>
+              </div>
+            </div>
+            <div class="term-done" id="term-done">
+              ✓ Instalação concluída · Capture 1.5.1 pronto no menu de aplicativos
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROADMAP -->
+  <section id="roadmap">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Evolução pública</div>
+        <h2>Roadmap do Capture</h2>
+        <p class="section-lead">
+          Desenvolvimento aberto e contínuo. Veja o que acabou de chegar na 1.5 e os próximos passos planejados.
+        </p>
+      </div>
+
+      <div class="roadmap-grid">
+        <article class="road-card">
+          <div class="road-top">
+            <span class="road-ver">v1.5.1</span>
+            <span class="status-pill status-done">Disponível</span>
+          </div>
+          <h3>Gravação MP4 com voz e Sobre</h3>
+          <p>Captura de microfone (PulseAudio/PipeWire) no MP4 com indicador ao vivo, fallback seguro para vídeo puro, opções CLI (--com-audio / --sem-audio) e janela Sobre.</p>
+        </article>
+
+        <article class="road-card">
+          <div class="road-top">
+            <span class="road-ver">v1.6</span>
+            <span class="status-pill status-next">Próxima</span>
+          </div>
+          <h3>Produtividade no editor</h3>
+          <p>Zoom e rolagem para imagens compridas, marcadores numerados (1, 2, 3), colar imagem (Ctrl+V), abrir JPEG/WebP e dimensões ao vivo na seleção.</p>
+        </article>
+
+        <article class="road-card">
+          <div class="road-top">
+            <span class="road-ver">v2.0</span>
+            <span class="status-pill status-plan">Planejado</span>
+          </div>
+          <h3>Suporte nativo a Wayland</h3>
+          <p>Integração completa com portais xdg-desktop-portal e PipeWire para funcionar com a mesma agilidade em sessões Wayland puras.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ EM LARGURA TOTAL -->
+  <section id="faq">
+    <div class="container">
+      <div class="section-head">
+        <div class="eyebrow">Perguntas frequentes</div>
+        <h2>Dúvidas rápidas</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item" data-open="true">
+          <button class="faq-trigger" type="button" aria-expanded="true">
+            <span>A gravação com voz funciona em qualquer Linux?</span>
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content"><div class="faq-inner">
+            <p>Sim. O Capture usa o áudio padrão do sistema via PulseAudio ou PipeWire (pulseaudio-pipewire). Se você estiver sem microfone ou desmarcar a opção no menu REC, ele grava o vídeo MP4 normalmente sem exibir erro.</p>
+          </div></div>
+        </div>
+
+        <div class="faq-item" data-open="false">
+          <button class="faq-trigger" type="button" aria-expanded="false">
+            <span>É realmente grátis e software livre?</span>
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content"><div class="faq-inner">
+            <p>Sim. Todo o código-fonte está disponível no GitHub sob licença MIT. Você pode usar no trabalho, estudar, modificar e redistribuir livremente, sem planos pagos ou telemetria.</p>
+          </div></div>
+        </div>
+
+        <div class="faq-item" data-open="false">
+          <button class="faq-trigger" type="button" aria-expanded="false">
+            <span>Como recebo novas versões?</span>
+            <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq-content"><div class="faq-inner">
+            <p>O pacote Flatpak atualiza automaticamente pela loja do sistema ou rodando <code>flatpak update</code> no terminal.</p>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASSINATURA / PORTFOLIO -->
+  <section style="padding: 48px 0;">
+    <div class="container">
+      <div class="author-card">
+        <div class="author-info">
+          <div class="author-avatar" aria-hidden="true">KB</div>
+          <div>
+            <h3>Criado por Kassio Braga</h3>
+            <p>Projeto open-source (licença MIT) mantido como parte do meu portfólio de ferramentas práticas para Linux.</p>
+          </div>
+        </div>
+        <div class="author-links">
+          <a class="btn btn-primary btn-sm" href="https://kassiobraga.com.br" target="_blank" rel="noopener">kassiobraga.com.br</a>
+          <a class="btn btn-secondary btn-sm" href="https://github.com/kassiobraga/capture" target="_blank" rel="noopener">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container footer-inner">
+    <span>Capture 1.5.1 · Software livre (MIT) por <a href="https://kassiobraga.com.br" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px">Kassio Braga</a></span>
+    <div class="footer-links">
+      <a href="https://kassiobraga.com.br" target="_blank" rel="noopener">Portfólio</a>
+      <a href="https://github.com/kassiobraga/capture" target="_blank" rel="noopener">Código-fonte</a>
+      <a href="https://github.com/kassiobraga/capture/issues" target="_blank" rel="noopener">Reportar problema</a>
+    </div>
+  </div>
+</footer>
+
+<div class="sonner-toaster" id="toaster" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 1. Tema Claro / Escuro */
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('theme-toggle');
+  const themeIcon = document.getElementById('theme-icon');
+  let currentTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+  function applyTheme(theme) {
+    currentTheme = theme;
+    root.setAttribute('data-theme', theme);
+    themeIcon.innerHTML = theme === 'dark'
+      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+  applyTheme(currentTheme);
+  themeBtn.addEventListener('click', () => applyTheme(currentTheme === 'dark' ? 'light' : 'dark'));
+
+  /* 2. Sonner Toast */
+  const toaster = document.getElementById('toaster');
+  function showToast(message) {
+    const el = document.createElement('div');
+    el.className = 'sonner-toast';
+    el.innerHTML = '<span class="sonner-dot"></span><span></span>';
+    el.querySelector('span:last-child').textContent = message;
+    toaster.appendChild(el);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('mounted')));
+    setTimeout(() => {
+      el.classList.add('leaving');
+      setTimeout(() => el.remove(), 340);
+    }, 2600);
+  }
+
+  document.querySelectorAll('[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const codeEl = document.getElementById(btn.getAttribute('data-copy'));
+      if (!codeEl) return;
+      try {
+        await navigator.clipboard.writeText(codeEl.textContent.trim());
+        showToast('Comando copiado para a área de transferência');
+      } catch {
+        showToast('Selecione e copie o comando manualmente');
+      }
+    });
+  });
+
+  /* 3. FAQ Accordion */
+  document.querySelectorAll('.faq-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      const item = trigger.closest('.faq-item');
+      const open = item.getAttribute('data-open') === 'true';
+      item.setAttribute('data-open', String(!open));
+      trigger.setAttribute('aria-expanded', String(!open));
+    });
+  });
+
+  /* 4. Teclado Tatil Interativo */
+  const kbdReadout = document.getElementById('kbd-readout');
+  const keycapBtns = Array.from(document.querySelectorAll('.keycap-btn'));
+
+  function triggerKeycap(btn) {
+    btn.classList.add('pressed');
+    kbdReadout.textContent = btn.getAttribute('data-msg');
+    setTimeout(() => btn.classList.remove('pressed'), 260);
+  }
+
+  keycapBtns.forEach((btn) => {
+    btn.addEventListener('click', () => triggerKeycap(btn));
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const match = keycapBtns.find((b) => b.getAttribute('data-key') === k);
+    if (match) triggerKeycap(match);
+  });
+
+  /* 5. Animacao de Instalacao no Terminal */
+  const termTimers = [];
+  const tl1 = document.getElementById('tl-1');
+  const tl2 = document.getElementById('tl-2');
+  const tl3 = document.getElementById('tl-3');
+  const termBar = document.getElementById('term-bar-fill');
+  const termPct = document.getElementById('term-pct');
+  const termStage = document.getElementById('term-stage-label');
+  const termDone = document.getElementById('term-done');
+  const btnReplay = document.getElementById('btn-replay-install');
+
+  function runInstallAnim() {
+    termTimers.forEach(clearTimeout);
+    termTimers.length = 0;
+    [tl1, tl2, tl3, termDone].forEach((el) => el.classList.remove('show'));
+    termBar.style.width = '0%';
+    termPct.textContent = '0%';
+    termStage.textContent = 'Preparando instalação...';
+
+    const steps = [
+      [250, () => { tl1.classList.add('show'); termBar.style.width = '24%'; termPct.textContent = '24%'; termStage.textContent = 'Verificando assinatura...'; }],
+      [900, () => { tl2.classList.add('show'); termBar.style.width = '62%'; termPct.textContent = '62%'; termStage.textContent = 'Baixando pacote 1.5.1...'; }],
+      [1650, () => { tl3.classList.add('show'); termBar.style.width = '88%'; termPct.textContent = '88%'; termStage.textContent = 'Configurando áudio e atalhos...'; }],
+      [2300, () => { termBar.style.width = '100%'; termPct.textContent = '100%'; termStage.textContent = 'Concluído'; termDone.classList.add('show'); }],
+    ];
+    steps.forEach(([ms, fn]) => termTimers.push(setTimeout(fn, prefersReduced ? 0 : ms)));
+  }
+
+  btnReplay.addEventListener('click', runInstallAnim);
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        runInstallAnim();
+        io.disconnect();
+      }
+    }, { threshold: 0.3 });
+    io.observe(document.getElementById('term-card'));
+  } else {
+    runInstallAnim();
+  }
+
+  /* 6. Baloezinhos Origin-Aware + Instant Switch */
+  const screenEl = document.getElementById('linux-screen');
+  const tooltip = document.getElementById('tooltip-bubble');
+  const ttTitle = document.getElementById('tt-title');
+  const ttKbd = document.getElementById('tt-kbd');
+  const ttDesc = document.getElementById('tt-desc');
+  let tooltipOpen = false;
+  let hideTimer = null;
+
+  function showTooltipFor(target) {
+    clearTimeout(hideTimer);
+    const title = target.getAttribute('data-tip-title');
+    if (!title) return;
+    ttTitle.textContent = title;
+    ttKbd.textContent = target.getAttribute('data-tip-kbd') || '';
+    ttDesc.textContent = target.getAttribute('data-tip-desc') || '';
+
+    const sRect = screenEl.getBoundingClientRect();
+    const tRect = target.getBoundingClientRect();
+    const bw = 252;
+    const bh = 86;
+
+    let x = (tRect.left - sRect.left) + (tRect.width / 2) - (bw / 2);
+    x = Math.max(12, Math.min(x, sRect.width - bw - 12));
+
+    let y = (tRect.top - sRect.top) - bh - 10;
+    let oy = '100%';
+    if (y < 36) {
+      y = (tRect.bottom - sRect.top) + 10;
+      oy = '0%';
+    }
+    const ox = Math.max(14, Math.min(bw - 14, (tRect.left - sRect.left + tRect.width / 2) - x)) + 'px';
+
+    tooltip.style.setProperty('--tx', Math.round(x) + 'px');
+    tooltip.style.setProperty('--ty', Math.round(y) + 'px');
+    tooltip.style.setProperty('--ox', ox);
+    tooltip.style.setProperty('--oy', oy);
+    tooltip.classList.toggle('instant', tooltipOpen);
+    tooltip.classList.add('open');
+    tooltip.setAttribute('aria-hidden', 'false');
+    tooltipOpen = true;
+  }
+
+  function scheduleHideTooltip() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      tooltip.classList.remove('open', 'instant');
+      tooltip.setAttribute('aria-hidden', 'true');
+      tooltipOpen = false;
+    }, 140);
+  }
+
+  screenEl.querySelectorAll('[data-tip-title]').forEach((el) => {
+    el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') showTooltipFor(el); });
+    el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') scheduleHideTooltip(); });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showTooltipFor(el);
+      if (el.id === 'btn-copy-shot') showToast('Captura copiada para a área de transferência');
+      if (el.id === 'btn-save-shot') showToast('Salvo em Imagens/Capture/captura-14h28.png');
+    });
+  });
+  document.addEventListener('click', () => { if (tooltipOpen) scheduleHideTooltip(); });
+
+  /* 7. Simulador das 4 Cenas Reais */
+  const tabBtns = Array.from(document.querySelectorAll('#scene-tabs .seg-btn'));
+  const indicator = document.getElementById('seg-indicator');
+  const progressFill = document.getElementById('scene-progress');
+  const togglePlayBtn = document.getElementById('toggle-play');
+  const playLabel = document.getElementById('play-label');
+  const playIcon = document.getElementById('play-icon');
+
+  const targetApp = document.getElementById('target-app');
+  const scrollSheet = document.getElementById('scroll-sheet');
+  const selectOverlay = document.getElementById('select-overlay');
+  const selectBox = document.getElementById('select-box');
+  const captureFlash = document.getElementById('capture-flash');
+  const captureWin = document.getElementById('capture-win');
+  const osdKey = document.getElementById('osd-key');
+  const cursor = document.getElementById('sim-cursor');
+  const hlMark = document.getElementById('hl-mark');
+  const annotRect = document.getElementById('annot-rect');
+  const annotArrow = document.getElementById('annot-arrow');
+  const annotHead = document.getElementById('annot-head');
+  const annotText = document.getElementById('annot-text');
+  const annotPen = document.getElementById('annot-pen');
+  const pixelBox = document.getElementById('pixel-box');
+  const scrollHud = document.getElementById('scroll-hud');
+  const scrollCount = document.getElementById('scroll-count');
+  const recBar = document.getElementById('rec-bar');
+  const recTimer = document.getElementById('rec-timer');
+  const recFrame = document.getElementById('rec-frame');
+  const clickRipple = document.getElementById('click-ripple');
+  const voiceCaption = document.getElementById('voice-caption');
+  const voiceText = document.getElementById('voice-text');
+
+  const btnRet = document.getElementById('btn-mode-ret');
+  const btnScroll = document.getElementById('btn-mode-scroll');
+  const btnRec = document.getElementById('btn-mode-rec');
+  const toolPen = document.getElementById('tool-pen');
+  const toolHl = document.getElementById('tool-hl');
+  const toolArrow = document.getElementById('tool-arrow');
+  const toolBlur = document.getElementById('tool-blur');
+
+  let sceneIdx = 0;
+  let playing = !prefersReduced;
+  let timers = [];
+  let recInterval = null;
+  let progressAnim = null;
+  const SCENE_MS = 5400;
+
+  function moveIndicator(btn) {
+    indicator.style.width = btn.offsetWidth + 'px';
+    indicator.style.transform = `translateX(${btn.offsetLeft - 4}px)`;
+  }
+  function clearSceneTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    clearInterval(recInterval);
+    if (progressAnim) progressAnim.cancel();
+  }
+  function at(ms, fn) { timers.push(setTimeout(fn, prefersReduced ? 0 : ms)); }
+  function setCursor(x, y) { cursor.style.transform = `translate(${x}px, ${y}px)`; }
+  function showOsd(text, dur = 1200) {
+    osdKey.textContent = text;
+    osdKey.classList.add('visible');
+    at(dur, () => osdKey.classList.remove('visible'));
+  }
+
+  function resetStage() {
+    targetApp.classList.remove('visible');
+    scrollSheet.style.transform = 'translateY(0px)';
+    selectOverlay.classList.remove('active');
+    selectBox.classList.remove('drawn');
+    captureFlash.classList.remove('flash');
+    captureWin.classList.remove('visible');
+    osdKey.classList.remove('visible');
+    hlMark.classList.remove('on');
+    [annotRect, annotArrow, annotHead, annotText, annotPen, pixelBox].forEach((e) => e.classList.remove('on'));
+    scrollHud.classList.remove('visible');
+    recBar.classList.remove('visible');
+    recFrame.classList.remove('visible');
+    voiceCaption.classList.remove('visible');
+    clickRipple.classList.remove('show', 'pulse');
+    [btnRet, btnScroll, btnRec, toolPen, toolHl, toolArrow, toolBlur].forEach((b) => b.classList.remove('active'));
+  }
+
+  function runScene(idx) {
+    clearSceneTimers();
+    sceneIdx = idx;
+    tabBtns.forEach((b, i) => b.setAttribute('aria-selected', String(i === idx)));
+    moveIndicator(tabBtns[idx]);
+    resetStage();
+
+    if (idx === 0) {
+      btnRet.classList.add('active');
+      toolPen.classList.add('active');
+      targetApp.classList.add('visible');
+      setCursor(118, 72);
+      at(240, () => showOsd('Print', 1050));
+      at(460, () => selectOverlay.classList.add('active'));
+      at(760, () => {
+        selectBox.classList.add('drawn');
+        setCursor(760, 415);
+      });
+      at(1640, () => {
+        captureFlash.classList.add('flash');
+        at(170, () => captureFlash.classList.remove('flash'));
+      });
+      at(1820, () => {
+        selectOverlay.classList.remove('active');
+        captureWin.classList.add('visible');
+      });
+    } else if (idx === 1) {
+      btnRet.classList.add('active');
+      captureWin.classList.add('visible');
+      setCursor(385, 452);
+      at(260, () => {
+        toolHl.classList.add('active');
+        hlMark.classList.add('on');
+        showOsd('M · Marca-texto', 900);
+      });
+      at(1100, () => {
+        toolHl.classList.remove('active');
+        toolArrow.classList.add('active');
+        setCursor(595, 190);
+        annotRect.classList.add('on');
+        annotArrow.classList.add('on');
+        at(200, () => { annotHead.classList.add('on'); annotText.classList.add('on'); });
+      });
+      at(2450, () => {
+        toolArrow.classList.remove('active');
+        toolPen.classList.add('active');
+        annotPen.classList.add('on');
+      });
+      at(3100, () => {
+        toolPen.classList.remove('active');
+        toolBlur.classList.add('active');
+        showOsd('B · Pixelar', 1000);
+        setCursor(280, 345);
+        pixelBox.classList.add('on');
+      });
+    } else if (idx === 2) {
+      btnScroll.classList.add('active');
+      targetApp.classList.add('visible');
+      scrollHud.classList.add('visible');
+      scrollCount.textContent = '1 quadro · 920 × 840 px';
+      setCursor(490, 260);
+      at(700, () => {
+        scrollSheet.style.transform = 'translateY(-120px)';
+        scrollCount.textContent = '2 quadros · 920 × 1680 px';
+      });
+      at(1800, () => {
+        scrollSheet.style.transform = 'translateY(-230px)';
+        scrollCount.textContent = '3 quadros · 920 × 2480 px';
+      });
+      at(3050, () => {
+        scrollHud.classList.remove('visible');
+        captureWin.classList.add('visible');
+      });
+    } else if (idx === 3) {
+      btnRec.classList.add('active');
+      targetApp.classList.add('visible');
+      recFrame.classList.add('visible');
+      recBar.classList.add('visible');
+      voiceText.textContent = '“Aqui eu clico no botão azul para publicar...”';
+      voiceCaption.classList.add('visible');
+      setCursor(310, 260);
+      showOsd('Ctrl+G · MP4 + Voz', 1400);
+
+      at(700, () => setCursor(760, 128));
+      at(1400, () => {
+        clickRipple.classList.add('show');
+        requestAnimationFrame(() => {
+          clickRipple.classList.remove('show');
+          clickRipple.classList.add('pulse');
+        });
+      });
+      at(2400, () => {
+        voiceText.textContent = '“Pronto! Tela e voz AAC salvas juntas no MP4.”';
+        setCursor(520, 310);
+      });
+
+      let secs = 1;
+      recTimer.textContent = '00:01';
+      recInterval = setInterval(() => {
+        secs += 1;
+        recTimer.textContent = '00:' + String(secs).padStart(2, '0');
+      }, 1000);
+    }
+
+    if (playing) {
+      progressAnim = progressFill.animate(
+        [{ width: '0%' }, { width: '100%' }],
+        { duration: SCENE_MS, easing: 'linear', fill: 'forwards' }
+      );
+      at(SCENE_MS, () => runScene((idx + 1) % tabBtns.length));
+    } else {
+      progressFill.style.width = '100%';
+    }
+  }
+
+  tabBtns.forEach((btn) => btn.addEventListener('click', () => runScene(Number(btn.getAttribute('data-scene')))));
+
+  function updatePlayUi() {
+    togglePlayBtn.setAttribute('aria-pressed', String(!playing));
+    playLabel.textContent = playing ? 'Pausar' : 'Reproduzir';
+    playIcon.innerHTML = playing
+      ? '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>'
+      : '<polygon points="6 4 20 12 6 20 6 4"/>';
+  }
+  togglePlayBtn.addEventListener('click', () => {
+    playing = !playing;
+    updatePlayUi();
+    runScene(sceneIdx);
+  });
+
+  window.addEventListener('resize', () => moveIndicator(tabBtns[sceneIdx]));
+  updatePlayUi();
+  requestAnimationFrame(() => runScene(0));
+})();
+</script>
+</body>
+</html>
